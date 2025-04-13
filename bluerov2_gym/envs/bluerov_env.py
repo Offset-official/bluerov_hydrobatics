@@ -21,10 +21,12 @@ class BlueRov(gym.Env):
         waypoint_threshold=0.5,
     ):
         super().__init__()
-        with resources.path("bluerov2_gym.assets", "BlueRov2.dae") as asset_path:
-            self.model_path = str(asset_path)
 
-        self.renderer = BlueRovRenderer()
+        if render_mode is not None:
+            with resources.path("bluerov2_gym.assets", "BlueRov2.dae") as asset_path:
+                self.model_path = str(asset_path)
+
+            self.renderer = BlueRovRenderer()
 
         self.waypoint_reward = waypoint_reward
         if waypoint_reward and trajectory_path:
