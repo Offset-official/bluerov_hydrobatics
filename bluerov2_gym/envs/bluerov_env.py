@@ -1,24 +1,39 @@
 from importlib import resources
+from pathlib import Path
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
 from bluerov2_gym.envs.core.dynamics import Dynamics
-from bluerov2_gym.envs.core.rewards import Reward
+from bluerov2_gym.envs.core.rewards import Reward, WaypointReward
 from bluerov2_gym.envs.core.visualization.renderer import BlueRovRenderer
 
 
 class BlueRov(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
-    def __init__(self, render_mode=None):
+    def __init__(
+        self,
+        render_mode=None,
+        trajectory_path=None,
+        waypoint_reward=False,
+        waypoint_threshold=0.5,
+    ):
         super().__init__()
         with resources.path("bluerov2_gym.assets", "BlueRov2.dae") as asset_path:
             self.model_path = str(asset_path)
 
         self.renderer = BlueRovRenderer()
-        self.reward_fn = Reward()
+
+        self.waypoint_reward = waypoint_reward
+        if waypoint_reward and trajectory_path:
+            self.reward_fn = WaypointReward(
+                trajectory_path, threshold=waypoint_threshold
+            )
+        else:
+            self.reward_fn = Reward()
+
         self.dynamics = Dynamics()
         self.state = {
             "x": 0,
@@ -67,6 +82,9 @@ class BlueRov(gym.Env):
             "omega": 0,
         }
 
+        if self.waypoint_reward:
+            self.reward_fn.reset()
+
         self.disturbance_dist = self.dynamics.reset()
         obs = {k: np.array([v], dtype=np.float32) for k, v in self.state.items()}
 
@@ -85,12 +103,33 @@ class BlueRov(gym.Env):
         if abs(self.state["x"]) > 15.0 or abs(self.state["y"]) > 15.0:
             terminated = True
 
+        if self.waypoint_reward and hasattr(self.reward_fn, "current_waypoint_idx"):
+            if self.reward_fn.current_waypoint_idx >= self.reward_fn.total_waypoints:
+                terminated = True
+                print(
+                    f"Trajectory completed! Reached {self.reward_fn.reached_waypoints}/{self.reward_fn.total_waypoints} waypoints"
+                )
+
         truncated = False
 
-        return obs, reward, terminated, truncated, {}
+        info = {
+            "waypoint_progress": (
+                self.reward_fn.current_waypoint_idx / self.reward_fn.total_waypoints
+                if self.waypoint_reward
+                else 0.0
+            )
+        }
+
+        return obs, reward, terminated, truncated, info
 
     def render(self):
         self.renderer.render(self.model_path)
+
+        if self.waypoint_reward and hasattr(self.reward_fn, "trajectory"):
+            self.renderer.visualize_waypoints(
+                self.reward_fn.trajectory,
+                current_idx=self.reward_fn.current_waypoint_idx,
+            )
 
     def step_sim(self):
         self.renderer.step_sim(self.state)
