@@ -46,8 +46,7 @@ def test_agent():
             obs, reward, terminated, truncated, info = env.step(action)
             episode_reward += reward
 
-            # Update the visualization
-            env.step_sim()
+            env.unwrapped.step_sim()
 
             # Add a small delay to make the visualization viewable
             time.sleep(0.1)
@@ -90,7 +89,7 @@ def test_agent_manual_input():
             obs, reward, terminated, truncated, info = env.step(action)
             episode_reward += reward
 
-            env.step_sim()
+            env.unwrapped.step_sim()
 
             time.sleep(0.1)
 
@@ -147,7 +146,8 @@ def manual_control():
             action[2] = -1.0  # Down
         print(f"Action: {action}")
         obs, reward, terminated, truncated, info = env.step(action)
-        env.step_sim()
+
+        env.unwrapped.step_sim()
 
         print(
             f"Position: x={obs['x'][0]:.2f}, y={obs['y'][0]:.2f}, z={obs['z'][0]:.2f}"
