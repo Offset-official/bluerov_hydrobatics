@@ -122,7 +122,7 @@ def generate_straight_line_trajectory(num_points=100, end_x=10.0):
         numpy array of shape (num_points, 3) containing x, y, z coordinates
     """
     x = np.linspace(0, end_x, num_points)
-    y = np.zeros(num_points) 
+    y = np.zeros(num_points)
     z = np.zeros(num_points)
 
     return np.column_stack((x, y, z))
@@ -230,9 +230,7 @@ def main(
         )
         traj_type = "square"
     elif trajectory_type == TrajectoryType.STRAIGHT_LINE:
-        trajectory = generate_straight_line_trajectory(
-            num_points=points, end_x=end_x
-        )
+        trajectory = generate_straight_line_trajectory(num_points=points, end_x=end_x)
         traj_type = "straight_line"
     else:
         raise ValueError(f"Unknown trajectory type: {trajectory_type}")
@@ -251,9 +249,13 @@ def main(
         title = f"{trajectory_type.value.capitalize()} Trajectory ({points} points)"
         if trajectory_type == TrajectoryType.STRAIGHT_LINE:
             title = f"{trajectory_type.value.capitalize()} Trajectory: (0,0,0) to ({end_x},0,0) ({points} points)"
-        elif trajectory_type in [TrajectoryType.SPIRAL, TrajectoryType.LEMNISCATE, TrajectoryType.SQUARE]:
+        elif trajectory_type in [
+            TrajectoryType.SPIRAL,
+            TrajectoryType.LEMNISCATE,
+            TrajectoryType.SQUARE,
+        ]:
             title = f"{trajectory_type.value.capitalize()} Trajectory (max depth: {depth}m, {points} points)"
-        
+
         plot_trajectory(trajectory, title=title)
 
 
