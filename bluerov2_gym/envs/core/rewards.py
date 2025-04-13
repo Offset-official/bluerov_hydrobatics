@@ -46,7 +46,6 @@ class WaypointReward:
         # Initialize the first waypoint
         if self.trajectory:
             self.current_waypoint = self.trajectory[0]
-            print(f"Initial waypoint: {self.current_waypoint}")
         else:
             raise ValueError("No waypoints loaded from trajectory file")
 
@@ -83,7 +82,6 @@ class WaypointReward:
                     except ValueError:
                         print(f"Warning: Skipping invalid row {row}")
 
-        print(f"Loaded {len(waypoints)} waypoints from {file_path}")
         return waypoints
 
     def get_reward(self, obs):

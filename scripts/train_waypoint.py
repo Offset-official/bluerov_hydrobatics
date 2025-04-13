@@ -30,6 +30,7 @@ def make_env(trajectory_path, waypoint_threshold, rank, seed=0):
             trajectory_path=trajectory_path,
             waypoint_reward=True,
             waypoint_threshold=waypoint_threshold,
+            render_mode=None, 
         )
         env = Monitor(env)
         env.reset(seed=seed + rank)
@@ -48,7 +49,7 @@ def train(
     batch_size: int = 64,
     n_epochs: int = 10,
     gamma: float = 0.99,
-    waypoint_threshold: float = 0.25,
+    waypoint_threshold: float = 0.01,
     n_envs: int = 8,
 ):
     """
