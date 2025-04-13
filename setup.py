@@ -16,5 +16,6 @@ setup(
         "numpy>=2.1.3",
         "scipy>=1.14.1",
         "stable-baselines3[extra]>=2.3.2",
+        "typer>=0.15.2",
     ],
 )
