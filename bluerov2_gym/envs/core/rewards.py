@@ -115,9 +115,7 @@ class WaypointReward:
 
             if self.current_waypoint_idx < len(self.trajectory):
                 self.current_waypoint = self.trajectory[self.current_waypoint_idx]
-                print(
-                    f"Reached waypoint {self.current_waypoint_idx-1}, moving to next: {self.current_waypoint}"
-                )
+                #print( f"Reached waypoint {self.current_waypoint_idx-1}, moving to next: {self.current_waypoint}")
             else:
                 print("All waypoints reached!")
 

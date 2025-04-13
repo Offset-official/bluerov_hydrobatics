@@ -6,7 +6,7 @@ class WaypointTrainingCallback(BaseCallback):
     Custom callback for printing waypoint training progress
     """
 
-    def __init__(self, verbose=1):
+    def __init__(self, verbose=True):
         super().__init__(verbose)
         self.episode_count = 0
         self.episode_reward = 0
@@ -25,7 +25,7 @@ class WaypointTrainingCallback(BaseCallback):
             self.episode_count += 1
             waypoint_progress = info.get("waypoint_progress", 0.0)
 
-            if self.verbose > 0:
+            if self.verbose:
                 print(f"----- Episode {self.episode_count} completed -----")
                 print(f"Total reward: {self.episode_reward:.2f}")
                 print(
