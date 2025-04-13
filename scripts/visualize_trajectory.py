@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import csv
 import time
 import typer
@@ -9,6 +9,8 @@ from typing import Optional
 import meshcat
 import meshcat.geometry as g
 import meshcat.transformations as tf
+
+app = typer.Typer(help="Vizualize a 3D trajectory with BlueROV2 model in Meshcat")
 
 
 def load_trajectory_from_csv(file_path):
@@ -202,6 +204,7 @@ class TrajectoryVisualizer:
             print("Animation stopped")
 
 
+@app.command()
 def main(
     file: str = typer.Argument(..., help="Path to CSV file with trajectory waypoints"),
     loop: bool = typer.Option(
@@ -214,18 +217,21 @@ def main(
     """
     Visualize a 3D trajectory with BlueROV2 model
     """
+    # Convert to Path object
+    file_path = Path(file)
+
     # Verify file exists
-    if not os.path.exists(file):
-        typer.echo(f"Error: File {file} not found")
+    if not file_path.exists():
+        typer.echo(f"Error: File {file_path} not found")
         raise typer.Exit(code=1)
 
     # Load trajectory from CSV
-    trajectory = load_trajectory_from_csv(file)
+    trajectory = load_trajectory_from_csv(file_path)
     if len(trajectory) == 0:
         typer.echo("Error: No valid waypoints found in the CSV file")
         raise typer.Exit(code=1)
 
-    typer.echo(f"Loaded {len(trajectory)} waypoints from {file}")
+    typer.echo(f"Loaded {len(trajectory)} waypoints from {file_path}")
 
     # Get BlueROV2 model path
     try:
@@ -254,4 +260,4 @@ def main(
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()
