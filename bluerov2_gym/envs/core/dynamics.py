@@ -43,7 +43,6 @@ class Dynamics:
         dvx, dvy, dvz, domega = disturbances
 
         # Extract action components
-        print(action)
         w_x, w_y, w_z, w_omega = action
 
         # Update state using your existing physics model
