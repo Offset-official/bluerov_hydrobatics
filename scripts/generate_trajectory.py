@@ -1,10 +1,11 @@
-#!/usr/bin/env python3
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import csv
 import os
-import argparse
+import typer
+from enum import Enum
+from typing import Optional
 from datetime import datetime
 
 
@@ -176,62 +177,54 @@ def plot_trajectory(trajectory, title="3D Trajectory"):
     plt.show()
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Generate 3D trajectory waypoints and save to CSV"
-    )
-    parser.add_argument(
-        "--type",
-        type=str,
-        default="spiral",
-        choices=["spiral", "lemniscate", "square"],
-        help="Type of trajectory to generate (default: spiral)",
-    )
-    parser.add_argument(
-        "--points",
-        type=int,
-        default=100,
-        help="Number of waypoints to generate (default: 100)",
-    )
-    parser.add_argument(
-        "--depth",
-        type=float,
-        default=9.0,
-        help="Maximum depth for the trajectory (default: 9.0m)",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="",
-        help="Output CSV file path (default: auto-generated)",
-    )
-    parser.add_argument(
-        "--plot", action="store_true", help="Plot the trajectory after generating it"
-    )
+class TrajectoryType(str, Enum):
+    SPIRAL = "spiral"
+    LEMNISCATE = "lemniscate"
+    SQUARE = "square"
 
-    args = parser.parse_args()
+
+app = typer.Typer(help="Generate 3D trajectory waypoints and save to CSV")
+
+
+@app.command()
+def main(
+    trajectory_type: TrajectoryType = typer.Option(
+        TrajectoryType.SPIRAL, "--type", "-t", help="Type of trajectory to generate"
+    ),
+    points: int = typer.Option(
+        100, "--points", "-p", help="Number of waypoints to generate"
+    ),
+    depth: float = typer.Option(
+        9.0, "--depth", "-d", help="Maximum depth for the trajectory (in meters)"
+    ),
+    output: Optional[str] = typer.Option(
+        None, "--output", "-o", help="Output CSV file path (default: auto-generated)"
+    ),
+    plot: bool = typer.Option(
+        False, "--plot", help="Plot the trajectory after generating it"
+    ),
+):
+    """Generate 3D trajectory waypoints and save to CSV."""
 
     # Generate trajectory based on type
-    if args.type == "spiral":
-        trajectory = generate_spiral_trajectory(
-            num_points=args.points, depth=args.depth
-        )
+    if trajectory_type == TrajectoryType.SPIRAL:
+        trajectory = generate_spiral_trajectory(num_points=points, depth=depth)
         traj_type = "spiral"
-    elif args.type == "lemniscate":
+    elif trajectory_type == TrajectoryType.LEMNISCATE:
         trajectory = generate_lemniscate_trajectory(
-            num_points=args.points, depth_range=(-args.depth, 0.0)
+            num_points=points, depth_range=(-depth, 0.0)
         )
         traj_type = "lemniscate"
-    elif args.type == "square":
+    elif trajectory_type == TrajectoryType.SQUARE:
         trajectory = generate_square_trajectory(
-            num_points=args.points, depth_range=(-args.depth, 0.0)
+            num_points=points, depth_range=(-depth, 0.0)
         )
         traj_type = "square"
     else:
-        raise ValueError(f"Unknown trajectory type: {args.type}")
+        raise ValueError(f"Unknown trajectory type: {trajectory_type}")
 
     # Generate output filename if not specified
-    if not args.output:
+    if not output:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "../trajectories"
@@ -241,18 +234,18 @@ def main():
             output_dir, f"{traj_type}_trajectory_{timestamp}.csv"
         )
     else:
-        output_file = args.output
+        output_file = output
 
     # Save trajectory to CSV
     save_trajectory_to_csv(trajectory, output_file)
 
     # Plot if requested
-    if args.plot:
+    if plot:
         plot_trajectory(
             trajectory,
-            title=f"{args.type.capitalize()} Trajectory (max depth: {args.depth}m, {args.points} points)",
+            title=f"{trajectory_type.value.capitalize()} Trajectory (max depth: {depth}m, {points} points)",
         )
 
 
 if __name__ == "__main__":
-    main()
+    app()

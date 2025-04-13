@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
-
 import os
 import csv
 import time
-import argparse
+import typer
 import numpy as np
 from importlib import resources
+from typing import Optional
 
 import meshcat
 import meshcat.geometry as g
@@ -203,37 +202,30 @@ class TrajectoryVisualizer:
             print("Animation stopped")
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Visualize a 3D trajectory with BlueROV2 model"
-    )
-    parser.add_argument(
-        "--file",
-        type=str,
-        required=True,
-        help="Path to CSV file with trajectory waypoints",
-    )
-    parser.add_argument(
-        "--loop", action="store_true", help="Loop the trajectory animation continuously"
-    )
-    parser.add_argument(
-        "--speed", type=float, default=1.0, help="Animation speed factor (default: 1.0)"
-    )
-
-    args = parser.parse_args()
-
+def main(
+    file: str = typer.Argument(..., help="Path to CSV file with trajectory waypoints"),
+    loop: bool = typer.Option(
+        False, "--loop", help="Loop the trajectory animation continuously"
+    ),
+    speed: float = typer.Option(
+        1.0, "--speed", help="Animation speed factor (default: 1.0)"
+    ),
+):
+    """
+    Visualize a 3D trajectory with BlueROV2 model
+    """
     # Verify file exists
-    if not os.path.exists(args.file):
-        print(f"Error: File {args.file} not found")
-        return
+    if not os.path.exists(file):
+        typer.echo(f"Error: File {file} not found")
+        raise typer.Exit(code=1)
 
     # Load trajectory from CSV
-    trajectory = load_trajectory_from_csv(args.file)
+    trajectory = load_trajectory_from_csv(file)
     if len(trajectory) == 0:
-        print("Error: No valid waypoints found in the CSV file")
-        return
+        typer.echo("Error: No valid waypoints found in the CSV file")
+        raise typer.Exit(code=1)
 
-    print(f"Loaded {len(trajectory)} waypoints from {args.file}")
+    typer.echo(f"Loaded {len(trajectory)} waypoints from {file}")
 
     # Get BlueROV2 model path
     try:
@@ -242,7 +234,9 @@ def main():
         with resources.path("bluerov2_gym.assets", "BlueRov2.dae") as asset_path:
             model_path = str(asset_path)
     except (ImportError, FileNotFoundError):
-        print("Warning: Could not find BlueROV2 model, using a simple cube instead")
+        typer.echo(
+            "Warning: Could not find BlueROV2 model, using a simple cube instead"
+        )
         model_path = None
 
     # Initialize visualizer and animate trajectory
@@ -256,8 +250,8 @@ def main():
             g.Box([0.5, 0.5, 0.25]), g.MeshLambertMaterial(color=0x0000FF)
         )
 
-    visualizer.animate_trajectory(trajectory, loop=args.loop, speed=args.speed)
+    visualizer.animate_trajectory(trajectory, loop=loop, speed=speed)
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)
