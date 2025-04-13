@@ -43,6 +43,9 @@ class BlueRovRenderer:
         self.vis["ground"].set_object(ground, ground_material)
         self.vis["ground"].set_transform(ground_transform)
 
+        # Add a reference frame
+        self.vis["reference_frame"].set_object(g.TriadGeometry(1.0))
+
     def step_sim(self, state):
         self.state = state  # maybe wrong. check later
         if self.render_mode != "human":
@@ -61,3 +64,34 @@ class BlueRovRenderer:
         transform_matrix[:3, 3] = translation
 
         self.vis["vessel"].set_transform(transform_matrix)
+
+    def visualize_waypoints(self, waypoints, current_idx=0):
+        """
+        Visualize trajectory waypoints in the environment
+
+        Args:
+            waypoints: List of waypoints as [x, y, z] coordinates
+            current_idx: Index of the current target waypoint
+        """
+        if self.render_mode != "human":
+            return
+
+        # Clear previous waypoints
+        self.vis["waypoints"].delete()
+
+        for i, point in enumerate(waypoints):
+            if i < current_idx:
+                # Past waypoints (reached) - small green
+                sphere = g.Sphere(0.1)
+                material = g.MeshPhongMaterial(color=0x00FF00)
+            elif i == current_idx:
+                # Current waypoint - larger yellow
+                sphere = g.Sphere(0.3)
+                material = g.MeshPhongMaterial(color=0xFFFF00)
+            else:
+                # Future waypoints - small white
+                sphere = g.Sphere(0.1)
+                material = g.MeshPhongMaterial(color=0xFFFFFF)
+
+            self.vis[f"waypoints/point_{i}"].set_object(sphere, material)
+            self.vis[f"waypoints/point_{i}"].set_transform(tf.translation_matrix(point))
