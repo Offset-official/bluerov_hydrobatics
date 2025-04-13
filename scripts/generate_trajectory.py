@@ -7,58 +7,70 @@ import os
 import argparse
 from datetime import datetime
 
-def generate_spiral_trajectory(num_points=100, radius=5.0, height=10.0, num_loops=3):
+def generate_spiral_trajectory(num_points=100, radius=5.0, depth=9.0, num_loops=3):
     """
     Generate a 3D spiral trajectory
     
     Args:
         num_points: Number of waypoints to generate
         radius: Maximum radius of the spiral
-        height: Total height of the spiral
+        depth: Maximum depth of the spiral (positive value, applied as negative z, default 9.0m)
         num_loops: Number of complete loops in the spiral
     
     Returns:
         numpy array of shape (num_points, 3) containing x, y, z coordinates
     """
+    # For underwater vehicles, z values should be negative or zero (depth)
     t = np.linspace(0, num_loops * 2 * np.pi, num_points)
     x = radius * np.cos(t)
     y = radius * np.sin(t)
-    z = np.linspace(0, height, num_points)
+    # Generate z values going downward (negative)
+    z = np.linspace(0, -depth, num_points)
     
     return np.column_stack((x, y, z))
 
-def generate_lemniscate_trajectory(num_points=100, scale=5.0, height_range=(-2.0, 2.0)):
+def generate_lemniscate_trajectory(num_points=100, scale=5.0, depth_range=(-9.0, 0.0)):
     """
     Generate a 3D lemniscate (figure-eight) trajectory
     
     Args:
         num_points: Number of waypoints to generate
         scale: Scale factor for x and y coordinates
-        height_range: Tuple of (min_height, max_height) for z oscillation
+        depth_range: Tuple of (max_depth, min_depth) for z oscillation (negative values for depth, default -9.0 to 0)
     
     Returns:
         numpy array of shape (num_points, 3) containing x, y, z coordinates
     """
+    # For underwater vehicles, ensure z values are negative or zero (depth)
+    min_depth = min(0.0, depth_range[1])  # Ensure minimum depth is not positive (z ≤ 0)
+    max_depth = min(min_depth, depth_range[0])  # Ensure maximum depth is less than min
+    depth_range = (max_depth, min_depth)
+    
     t = np.linspace(0, 2 * np.pi, num_points)
     x = scale * np.sin(t)
     y = scale * np.sin(t) * np.cos(t)
-    # Add some variation in height
-    z = np.linspace(height_range[0], height_range[1], num_points)
+    # Add variation in depth
+    z = np.linspace(depth_range[0], depth_range[1], num_points)
     
     return np.column_stack((x, y, z))
 
-def generate_square_trajectory(num_points=100, side_length=5.0, height_range=(-1.0, 1.0)):
+def generate_square_trajectory(num_points=100, side_length=5.0, depth_range=(-9.0, 0.0)):
     """
     Generate a 3D square trajectory
     
     Args:
         num_points: Number of waypoints to generate
         side_length: Length of each side of the square
-        height_range: Tuple of (min_height, max_height) for z oscillation
+        depth_range: Tuple of (max_depth, min_depth) for z oscillation (negative values for depth, default -9.0 to 0)
     
     Returns:
         numpy array of shape (num_points, 3) containing x, y, z coordinates
     """
+    # For underwater vehicles, ensure z values are negative or zero (depth)
+    min_depth = min(0.0, depth_range[1])  # Ensure minimum depth is not positive (z ≤ 0)
+    max_depth = min(min_depth, depth_range[0])  # Ensure maximum depth is less than min
+    depth_range = (max_depth, min_depth)
+    
     points_per_side = num_points // 4
     
     # Create four line segments for the square sides
@@ -93,9 +105,8 @@ def generate_square_trajectory(num_points=100, side_length=5.0, height_range=(-1
         x = x[:num_points]
         y = y[:num_points]
     
-    # Add some variation in height with a sinusoidal pattern
-    z = np.linspace(height_range[0], height_range[1], num_points)
-    z = height_range[0] + (height_range[1] - height_range[0]) * (np.sin(np.linspace(0, 2*np.pi, num_points)) + 1) / 2
+    # Add some variation in depth with a sinusoidal pattern (negative values)
+    z = depth_range[0] + (depth_range[1] - depth_range[0]) * (np.sin(np.linspace(0, 2*np.pi, num_points)) + 1) / 2
     
     return np.column_stack((x, y, z))
 
@@ -144,6 +155,8 @@ def main():
                         help='Type of trajectory to generate (default: spiral)')
     parser.add_argument('--points', type=int, default=100, 
                         help='Number of waypoints to generate (default: 100)')
+    parser.add_argument('--depth', type=float, default=9.0,
+                        help='Maximum depth for the trajectory (default: 9.0m)')
     parser.add_argument('--output', type=str, default='',
                         help='Output CSV file path (default: auto-generated)')
     parser.add_argument('--plot', action='store_true',
@@ -153,13 +166,13 @@ def main():
     
     # Generate trajectory based on type
     if args.type == 'spiral':
-        trajectory = generate_spiral_trajectory(num_points=args.points)
+        trajectory = generate_spiral_trajectory(num_points=args.points, depth=args.depth)
         traj_type = 'spiral'
     elif args.type == 'lemniscate':
-        trajectory = generate_lemniscate_trajectory(num_points=args.points)
+        trajectory = generate_lemniscate_trajectory(num_points=args.points, depth_range=(-args.depth, 0.0))
         traj_type = 'lemniscate'
     elif args.type == 'square':
-        trajectory = generate_square_trajectory(num_points=args.points)
+        trajectory = generate_square_trajectory(num_points=args.points, depth_range=(-args.depth, 0.0))
         traj_type = 'square'
     else:
         raise ValueError(f"Unknown trajectory type: {args.type}")
@@ -178,7 +191,7 @@ def main():
     
     # Plot if requested
     if args.plot:
-        plot_trajectory(trajectory, title=f"{args.type.capitalize()} Trajectory ({args.points} points)")
+        plot_trajectory(trajectory, title=f"{args.type.capitalize()} Trajectory (max depth: {args.depth}m, {args.points} points)")
 
 if __name__ == "__main__":
     main()
