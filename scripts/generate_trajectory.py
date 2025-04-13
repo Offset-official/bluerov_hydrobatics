@@ -110,6 +110,24 @@ def generate_square_trajectory(
     return np.column_stack((x, y, z))
 
 
+def generate_straight_line_trajectory(num_points=100, end_x=10.0):
+    """
+    Generate a 3D straight line trajectory that only moves along the x-axis from origin
+
+    Args:
+        num_points: Number of waypoints to generate
+        end_x: X-coordinate of the ending point, default is 10.0
+
+    Returns:
+        numpy array of shape (num_points, 3) containing x, y, z coordinates
+    """
+    x = np.linspace(0, end_x, num_points)
+    y = np.zeros(num_points) 
+    z = np.zeros(num_points)
+
+    return np.column_stack((x, y, z))
+
+
 def save_trajectory_to_csv(trajectory, filepath):
     """
     Save trajectory waypoints to a CSV file
@@ -169,6 +187,7 @@ class TrajectoryType(str, Enum):
     SPIRAL = "spiral"
     LEMNISCATE = "lemniscate"
     SQUARE = "square"
+    STRAIGHT_LINE = "straight_line"
 
 
 app = typer.Typer(help="Generate 3D trajectory waypoints and save to CSV")
@@ -191,6 +210,9 @@ def main(
     plot: bool = typer.Option(
         False, "--plot", help="Plot the trajectory after generating it"
     ),
+    end_x: float = typer.Option(
+        10.0, "--end-x", help="X-coordinate of the ending point (for straight line)"
+    ),
 ):
     """Generate 3D trajectory waypoints and save to CSV."""
 
@@ -207,6 +229,11 @@ def main(
             num_points=points, depth_range=(-depth, 0.0)
         )
         traj_type = "square"
+    elif trajectory_type == TrajectoryType.STRAIGHT_LINE:
+        trajectory = generate_straight_line_trajectory(
+            num_points=points, end_x=end_x
+        )
+        traj_type = "straight_line"
     else:
         raise ValueError(f"Unknown trajectory type: {trajectory_type}")
 
@@ -214,17 +241,20 @@ def main(
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = Path(__file__).parent.parent / "trajectories"
         output_dir.mkdir(exist_ok=True)
-        output_file = output_dir / f"{traj_type}_trajectory_{timestamp}.csv"
+        output_file = output_dir / f"{traj_type}_{timestamp}.csv"
     else:
         output_file = Path(output)
 
     save_trajectory_to_csv(trajectory, output_file)
 
     if plot:
-        plot_trajectory(
-            trajectory,
-            title=f"{trajectory_type.value.capitalize()} Trajectory (max depth: {depth}m, {points} points)",
-        )
+        title = f"{trajectory_type.value.capitalize()} Trajectory ({points} points)"
+        if trajectory_type == TrajectoryType.STRAIGHT_LINE:
+            title = f"{trajectory_type.value.capitalize()} Trajectory: (0,0,0) to ({end_x},0,0) ({points} points)"
+        elif trajectory_type in [TrajectoryType.SPIRAL, TrajectoryType.LEMNISCATE, TrajectoryType.SQUARE]:
+            title = f"{trajectory_type.value.capitalize()} Trajectory (max depth: {depth}m, {points} points)"
+        
+        plot_trajectory(trajectory, title=title)
 
 
 if __name__ == "__main__":
