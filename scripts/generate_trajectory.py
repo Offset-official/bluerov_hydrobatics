@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import csv
-import os
+from pathlib import Path
 import typer
 from enum import Enum
 from typing import Optional
@@ -22,11 +22,9 @@ def generate_spiral_trajectory(num_points=100, radius=5.0, depth=9.0, num_loops=
     Returns:
         numpy array of shape (num_points, 3) containing x, y, z coordinates
     """
-    # For underwater vehicles, z values should be negative or zero (depth)
     t = np.linspace(0, num_loops * 2 * np.pi, num_points)
     x = radius * np.cos(t)
     y = radius * np.sin(t)
-    # Generate z values going downward (negative)
     z = np.linspace(0, -depth, num_points)
 
     return np.column_stack((x, y, z))
@@ -44,15 +42,13 @@ def generate_lemniscate_trajectory(num_points=100, scale=5.0, depth_range=(-9.0,
     Returns:
         numpy array of shape (num_points, 3) containing x, y, z coordinates
     """
-    # For underwater vehicles, ensure z values are negative or zero (depth)
-    min_depth = min(0.0, depth_range[1])  # Ensure minimum depth is not positive (z ≤ 0)
-    max_depth = min(min_depth, depth_range[0])  # Ensure maximum depth is less than min
+    min_depth = min(0.0, depth_range[1])
+    max_depth = min(min_depth, depth_range[0])
     depth_range = (max_depth, min_depth)
 
     t = np.linspace(0, 2 * np.pi, num_points)
     x = scale * np.sin(t)
     y = scale * np.sin(t) * np.cos(t)
-    # Add variation in depth
     z = np.linspace(depth_range[0], depth_range[1], num_points)
 
     return np.column_stack((x, y, z))
@@ -72,37 +68,30 @@ def generate_square_trajectory(
     Returns:
         numpy array of shape (num_points, 3) containing x, y, z coordinates
     """
-    # For underwater vehicles, ensure z values are negative or zero (depth)
-    min_depth = min(0.0, depth_range[1])  # Ensure minimum depth is not positive (z ≤ 0)
-    max_depth = min(min_depth, depth_range[0])  # Ensure maximum depth is less than min
+    min_depth = min(0.0, depth_range[1])
+    max_depth = min(min_depth, depth_range[0])
     depth_range = (max_depth, min_depth)
 
     points_per_side = num_points // 4
 
-    # Create four line segments for the square sides
+    # 4 line segments for the square sides
     half_len = side_length / 2
 
-    # First segment: moving along x-axis
     x1 = np.linspace(-half_len, half_len, points_per_side)
     y1 = np.ones(points_per_side) * -half_len
 
-    # Second segment: moving along y-axis
     x2 = np.ones(points_per_side) * half_len
     y2 = np.linspace(-half_len, half_len, points_per_side)
 
-    # Third segment: moving back along x-axis
     x3 = np.linspace(half_len, -half_len, points_per_side)
     y3 = np.ones(points_per_side) * half_len
 
-    # Fourth segment: moving back along y-axis
     x4 = np.ones(points_per_side) * -half_len
     y4 = np.linspace(half_len, -half_len, points_per_side)
 
-    # Combine segments
     x = np.concatenate([x1, x2, x3, x4])
     y = np.concatenate([y1, y2, y3, y4])
 
-    # Make sure the array has exactly num_points
     if len(x) < num_points:
         pad_length = num_points - len(x)
         x = np.pad(x, (0, pad_length), mode="edge")
@@ -111,7 +100,6 @@ def generate_square_trajectory(
         x = x[:num_points]
         y = y[:num_points]
 
-    # Add some variation in depth with a sinusoidal pattern (negative values)
     z = (
         depth_range[0]
         + (depth_range[1] - depth_range[0])
@@ -128,7 +116,7 @@ def save_trajectory_to_csv(trajectory, filepath):
 
     Args:
         trajectory: numpy array of shape (num_points, 3) containing x, y, z coordinates
-        filepath: path to save the CSV file
+        filepath: path to save the CSV file (str or Path object)
     """
     with open(filepath, "w", newline="") as f:
         writer = csv.writer(f)
@@ -206,7 +194,6 @@ def main(
 ):
     """Generate 3D trajectory waypoints and save to CSV."""
 
-    # Generate trajectory based on type
     if trajectory_type == TrajectoryType.SPIRAL:
         trajectory = generate_spiral_trajectory(num_points=points, depth=depth)
         traj_type = "spiral"
@@ -223,23 +210,16 @@ def main(
     else:
         raise ValueError(f"Unknown trajectory type: {trajectory_type}")
 
-    # Generate output filename if not specified
     if not output:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "../trajectories"
-        )
-        os.makedirs(output_dir, exist_ok=True)
-        output_file = os.path.join(
-            output_dir, f"{traj_type}_trajectory_{timestamp}.csv"
-        )
+        output_dir = Path(__file__).parent.parent / "trajectories"
+        output_dir.mkdir(exist_ok=True)
+        output_file = output_dir / f"{traj_type}_trajectory_{timestamp}.csv"
     else:
-        output_file = output
+        output_file = Path(output)
 
-    # Save trajectory to CSV
     save_trajectory_to_csv(trajectory, output_file)
 
-    # Plot if requested
     if plot:
         plot_trajectory(
             trajectory,
