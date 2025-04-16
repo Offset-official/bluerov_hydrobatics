@@ -16,8 +16,8 @@ class BlueRov(gym.Env):
         super().__init__()
         with resources.path("bluerov2_gym.assets", "BlueRov2.dae") as asset_path:
             self.model_path = str(asset_path)
-
-        self.renderer = BlueRovRenderer()
+        if render_mode == "human":
+            self.renderer = BlueRovRenderer()
         self.reward_fn = Reward()
         self.dynamics = Dynamics()
         self.state = {

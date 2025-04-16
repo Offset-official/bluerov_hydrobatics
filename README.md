@@ -53,3 +53,18 @@ python scripts/visualize_trajectory.py trajectories/lemniscate.csv --loop --spee
 # Visualize one of your generated trajectories
 python scripts/visualize_trajectory.py my_square_trajectory.csv
 ```
+
+
+### Main Algorithm Runner
+
+
+```bash
+# Run PID controller with a trajectory file with max steps = 200000
+python bluerov_control.py --algorithm pid --file ./trajectories/spiral.csv --max-steps 200000
+
+# Run PPO agent with a pre-trained model
+python bluerov_control.py --algorithm ppo --model bluerov_ppo 
+
+# Run manual control
+python bluerov_control.py --algorithm manual
+```
