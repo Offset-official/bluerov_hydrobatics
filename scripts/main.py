@@ -148,7 +148,9 @@ def set_initial_state(env, waypoints):
             "omega": 0,
         }
 
-        obs = {k: np.array([v], dtype=np.float32) for k, v in env.unwrapped.state.items()}
+        obs = {
+            k: np.array([v], dtype=np.float32) for k, v in env.unwrapped.state.items()
+        }
         env.unwrapped.step_sim()
         return obs
     except AttributeError:
@@ -326,7 +328,7 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
     """Run BlueROV with a specified RL algorithm"""
     # Create the environment with rendering enabled and increased step limit
     env = gym.make("BlueRov-v0", render_mode="human", max_episode_steps=max_steps)
-    
+
     # If trajectory file is provided, visualize it
     if trajectory_file:
         waypoints = load_trajectory_from_csv(trajectory_file)
@@ -334,23 +336,23 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
             obs, _ = env.reset()
             vis = env.unwrapped.renderer.vis
             visualize_trajectory(vis, waypoints)
-            
+
             # Optionally, start from first waypoint
             obs = set_initial_state(env, waypoints)
         else:
             obs, _ = env.reset()
     else:
         obs, _ = env.reset()
-    
+
     # Render initial state
     env.render()
-    
+
     algorithm = algorithm.lower()
-    
+
     # Check if we're loading a pre-trained model
     if model_path:
         print(f"Loading pre-trained {algorithm.upper()} model from {model_path}")
-        
+
         # Load the appropriate model based on algorithm
         if algorithm == "ppo":
             model = PPO.load(model_path)
@@ -363,11 +365,13 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
         else:
             print(f"Unknown algorithm: {algorithm}. Using PPO as default.")
             model = PPO.load(model_path)
-            
+
         # Try to load normalization stats if available
         try:
             normalize_path = f"{model_path}_vec_normalize.pkl"
-            vec_env = DummyVecEnv([lambda: gym.make("BlueRov-v0", max_episode_steps=max_steps)])
+            vec_env = DummyVecEnv(
+                [lambda: gym.make("BlueRov-v0", max_episode_steps=max_steps)]
+            )
             vec_env = VecNormalize.load(normalize_path, vec_env)
             vec_env.training = False
             vec_env.norm_reward = False
@@ -380,64 +384,68 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
         print(f"No model path provided for {algorithm}. Running with random actions.")
         model = None
         use_normalization = False
-    
+
     # Run episodes
     episodes = 1  # Default to one episode
-    
+
     for episode in range(episodes):
         episode_reward = 0
         step_count = 0
-        
+
         print(f"\nStarting Episode {episode + 1}")
-        
+
         while step_count < max_steps:
             if model:
                 # Get action from model
                 if use_normalization:
                     # Convert dict observation to array if necessary
                     if isinstance(obs, dict):
-                        obs_array = np.concatenate([obs[key] for key in sorted(obs.keys())])
+                        obs_array = np.concatenate(
+                            [obs[key] for key in sorted(obs.keys())]
+                        )
                     else:
                         obs_array = obs
-                    
+
                     # Normalize observation
                     obs_normalized = vec_env.normalize_obs(obs_array)
                     action, _ = model.predict(obs_normalized, deterministic=True)
                 else:
                     # Convert dict observation to array if necessary
                     if isinstance(obs, dict):
-                        obs_array = np.concatenate([obs[key] for key in sorted(obs.keys())])
+                        obs_array = np.concatenate(
+                            [obs[key] for key in sorted(obs.keys())]
+                        )
                     else:
                         obs_array = obs
-                        
+
                     action, _ = model.predict(obs_array, deterministic=True)
             else:
                 # Random action if no model is loaded
                 action = np.random.uniform(-1, 1, 4)
-            
+
             # Take the action in the environment
             obs, reward, terminated, truncated, info = env.step(action)
             episode_reward += reward
-            
+
             env.unwrapped.step_sim()
-            
+
             # Add a small delay to make the visualization viewable
             time.sleep(0.1)
-            
+
             step_count += 1
-            
+
             # Print current state
             print(
                 f"Step {step_count}: Position (x={obs['x'][0]:.2f}, y={obs['y'][0]:.2f}, z={obs['z'][0]:.2f})"
             )
             print(f"Current reward: {reward:.2f}")
             print(f"Action: {action}")
-            
+
             if terminated or truncated:
                 print(f"Episode {episode + 1} finished after {step_count} steps")
                 print(f"Total reward: {episode_reward:.2f}")
                 break
-        
+
     env.close()
 
 
@@ -453,9 +461,9 @@ def manual_control(max_steps=100000):
     env = gym.make("BlueRov-v0", render_mode="human", max_episode_steps=max_steps)
     obs, _ = env.reset()
     env.render()
-    
+
     step_count = 0
-    
+
     print("\nManual Control Mode")
     print("Controls:")
     print("- W/S: Forward/Backward")
@@ -487,7 +495,7 @@ def manual_control(max_steps=100000):
             action[2] = 1.0  # Up
         elif key == "f":
             action[2] = -1.0  # Down
-            
+
         print(f"Action: {action}")
         obs, reward, terminated, truncated, info = env.step(action)
 
@@ -501,7 +509,7 @@ def manual_control(max_steps=100000):
         if terminated or truncated:
             obs, _ = env.reset()
             print("Episode ended, resetting...")
-            
+
         step_count += 1
 
     env.close()
@@ -509,36 +517,42 @@ def manual_control(max_steps=100000):
 
 def main():
     parser = argparse.ArgumentParser(description="BlueROV2 Control and Simulation")
-    
+
     parser.add_argument("--file", type=str, help="Path to trajectory CSV file")
-    
+
     parser.add_argument(
-        "--algorithm", 
-        type=str, 
+        "--algorithm",
+        type=str,
         choices=["pid", "ppo", "manual"],
         default="pid",
-        help="Control algorithm to use (pid, ppo, or manual)"
+        help="Control algorithm to use (pid, ppo, sac, td3, a2c, or manual)",
     )
-    
+
     parser.add_argument(
-        "--model", 
-        type=str, 
-        help="Path to the pre-trained model (required for RL algorithms)"
+        "--model",
+        type=str,
+        help="Path to the pre-trained model (required for RL algorithms)",
     )
-    
+
     parser.add_argument(
         "--max-steps",
         type=int,
         default=100000,
-        help="Maximum number of steps per episode (default: 100000)"
+        help="Maximum number of steps per episode (default: 100000)",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Validate arguments
-    if args.algorithm in ["ppo"] and not args.model and args.algorithm != "manual":
-        print(f"Warning: No model provided for {args.algorithm}. Will run with random actions.")
-    
+    if (
+        args.algorithm in ["ppo"]
+        and not args.model
+        and args.algorithm != "manual"
+    ):
+        print(
+            f"Warning: No model provided for {args.algorithm}. Will run with random actions."
+        )
+
     # Run the appropriate controller
     if args.algorithm == "pid":
         if not args.file:
