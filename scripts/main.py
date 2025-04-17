@@ -124,18 +124,9 @@ def visualize_trajectory(vis, trajectory):
 
 
 def set_initial_state(env, waypoints):
-    if len(waypoints) < 2:
-        print(
-            "Warning: Trajectory needs at least 2 points to determine initial heading"
-        )
-        return env.reset()[0]
-
     start_point = waypoints[0]
     next_point = waypoints[1]
-
     initial_heading = calculate_heading(start_point, next_point)
-
-    # Try to set the internal state directly for the BlueROV environment
     try:
         env.unwrapped.state = {
             "x": start_point[0],
@@ -159,14 +150,7 @@ def set_initial_state(env, waypoints):
         return env.reset()[0]
 
 
-def visualize_current_target(vis, position, color=0x00FFFF):
-    """Visualize the current target point"""
-    vis["current_target"].set_object(g.Sphere(0.15), g.MeshPhongMaterial(color=color))
-    vis["current_target"].set_transform(tf.translation_matrix(position))
-
-
 def run_pid_controller(trajectory_file, max_steps=100000):
-    """Run the BlueROV with PID control on a trajectory"""
     # Define trajectory
     waypoints = load_trajectory_from_csv(trajectory_file)
     if len(waypoints) == 0:
@@ -252,12 +236,6 @@ def run_pid_controller(trajectory_file, max_steps=100000):
         control_y = pid_y.compute(error_y, dt)
         control_z = pid_z.compute(error_z, dt)
         control_heading = pid_heading.compute(error_heading, dt)
-
-        # Prioritize heading correction first if heading error is large
-        if abs(error_heading) > 0.5:  # about 30 degrees
-            # Reduce forward/lateral motion to focus on turning
-            control_x *= 0.5
-            control_y *= 0.5
 
         # Convert to BlueROV action space
         # [forward, lateral, vertical, rotation]
@@ -356,12 +334,6 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
         # Load the appropriate model based on algorithm
         if algorithm == "ppo":
             model = PPO.load(model_path)
-        elif algorithm == "sac":
-            model = SAC.load(model_path)
-        elif algorithm == "td3":
-            model = TD3.load(model_path)
-        elif algorithm == "a2c":
-            model = A2C.load(model_path)
         else:
             print(f"Unknown algorithm: {algorithm}. Using PPO as default.")
             model = PPO.load(model_path)
@@ -396,9 +368,7 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
 
         while step_count < max_steps:
             if model:
-                # Get action from model
                 if use_normalization:
-                    # Convert dict observation to array if necessary
                     if isinstance(obs, dict):
                         obs_array = np.concatenate(
                             [obs[key] for key in sorted(obs.keys())]
@@ -406,11 +376,9 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
                     else:
                         obs_array = obs
 
-                    # Normalize observation
                     obs_normalized = vec_env.normalize_obs(obs_array)
                     action, _ = model.predict(obs_normalized, deterministic=True)
                 else:
-                    # Convert dict observation to array if necessary
                     if isinstance(obs, dict):
                         obs_array = np.concatenate(
                             [obs[key] for key in sorted(obs.keys())]
@@ -423,7 +391,6 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
                 # Random action if no model is loaded
                 action = np.random.uniform(-1, 1, 4)
 
-            # Take the action in the environment
             obs, reward, terminated, truncated, info = env.step(action)
             episode_reward += reward
 

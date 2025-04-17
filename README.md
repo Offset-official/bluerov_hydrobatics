@@ -60,11 +60,11 @@ python scripts/visualize_trajectory.py my_square_trajectory.csv
 
 ```bash
 # Run PID controller with a trajectory file with max steps = 200000
-python bluerov_control.py --algorithm pid --file ./trajectories/spiral.csv --max-steps 200000
+python ./scripts/main.py --algorithm pid --file ./trajectories/spiral.csv --max-steps 200000
 
 # Run PPO agent with a pre-trained model
-python bluerov_control.py --algorithm ppo --model bluerov_ppo 
+python ./scripts/main.py --algorithm ppo --model bluerov_ppo 
 
 # Run manual control
-python bluerov_control.py --algorithm manual
+python ./scripts/main.py --algorithm manual
 ```
