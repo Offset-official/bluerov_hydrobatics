@@ -61,3 +61,12 @@ class BlueRovRenderer:
         transform_matrix[:3, 3] = translation
 
         self.vis["vessel"].set_transform(transform_matrix)
+
+    def set_waypoints(self, waypoints):
+        # display the xyz trajectory using white spheres
+        for i, waypoint in enumerate(waypoints):
+            sphere = g.Sphere(0.1)
+            sphere_material = g.MeshPhongMaterial(color=0xFFFFFF)
+            waypoint_transform = tf.translation_matrix(waypoint)
+            self.vis[f"waypoint_{i}"].set_object(sphere, sphere_material)
+            self.vis[f"waypoint_{i}"].set_transform(waypoint_transform)

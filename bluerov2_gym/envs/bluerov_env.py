@@ -26,7 +26,7 @@ class BlueRov(gym.Env):
     
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, trajectory_file=None):
         """
         Initialize the BlueROV environment
         
@@ -84,6 +84,7 @@ class BlueRov(gym.Env):
         # Simulation parameters
         self.dt = 0.1  # Time step (seconds)
         self.render_mode = render_mode
+        self.trajectory_file = trajectory_file
 
     def reset(self, *, seed=None, options=None):
         """
@@ -135,7 +136,10 @@ class BlueRov(gym.Env):
         obs = {k: np.array([v], dtype=np.float32) for k, v in self.state.items()}
 
         # Calculate reward based on current state
-        reward = self.reward_fn.get_reward(obs)
+        if self.trajectory_file is not None:
+            reward = self.reward_fn.get_reward_trajectory(obs, action, self.trajectory_file)
+        else:
+            reward = self.reward_fn.get_reward(obs)
 
         # Determine if episode should terminate
         terminated = False
@@ -161,3 +165,16 @@ class BlueRov(gym.Env):
         Update the visualization with the current state.
         """
         self.renderer.step_sim(self.state)
+
+
+    def set_waypoints_visualization(self, waypoints):
+        """
+        Set the trajectory waypoints for visualization.
+        
+        Args:
+            waypoints (numpy.ndarray): Array of shape (num_points, 3) with x, y, z coordinates
+        """
+        if self.renderer:
+            self.renderer.set_waypoints(waypoints)
+        else:
+            raise RuntimeError("Renderer not initialized. Set render_mode to 'human'.")
