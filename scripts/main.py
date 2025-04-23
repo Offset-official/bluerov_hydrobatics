@@ -8,12 +8,25 @@ import meshcat.geometry as g
 import meshcat.transformations as tf
 import matplotlib.pyplot as plt
 
+from pathlib import Path
 import bluerov2_gym  # This import will automatically register the environment
-
+from gymnasium import spaces   # add with other imports
 # Add imports for Stable Baselines
 from stable_baselines3 import PPO, SAC, TD3, A2C
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 
+def maybe_flatten(obs):
+    """Return obs unchanged if it's already a Box; flatten Dict -> array."""
+    if isinstance(obs, dict):
+        return np.concatenate([obs[k] for k in sorted(obs.keys())])
+    return obs
+ALGO_MAP = {
+    "ppo": PPO,
+    "sac": SAC,
+    "td3": TD3,
+    "a2c": A2C,
+}
 
 class PIDController:
     def __init__(self, kp, ki, kd):
@@ -369,28 +382,29 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
 
         while step_count < max_steps:
             if model:
-                if use_normalization:
-                    if isinstance(obs, dict):
-                        obs_array = np.concatenate(
-                            [obs[key] for key in sorted(obs.keys())]
-                        )
-                    else:
-                        obs_array = obs
-
-                    obs_normalized = vec_env.normalize_obs(obs_array)
-                    action, _ = model.predict(obs_normalized, deterministic=True)
+    # -------- 1) optional VecNormalize (only works for flat Box obs) --------
+                if use_normalization and isinstance(obs, np.ndarray):
+                    obs_in = vec_env.normalize_obs(obs)
                 else:
-                    if isinstance(obs, dict):
-                        obs_array = np.concatenate(
-                            [obs[key] for key in sorted(obs.keys())]
-                        )
-                    else:
-                        obs_array = obs
+                    obs_in = obs  # dict or already‑flat array
 
-                    action, _ = model.predict(obs_array, deterministic=True)
+                # -------- 2) match policy expectation -----------------------------------
+                #    – If the policy was trained on a Dict space, pass a Dict.
+                #    – If the policy was trained on a Box, pass a 1‑D array.
+                if isinstance(model.observation_space, gym.spaces.Box):
+                    # policy expects flat vector  ➜  ensure obs_in is flat
+                    if isinstance(obs_in, dict):
+                        obs_in = np.concatenate([obs_in[k] for k in sorted(obs_in.keys())])
+                else:
+                    # policy expects Dict  ➜  ensure obs_in is Dict
+                    # (nothing to do; it already is, otherwise training would not have worked)
+                    pass
+
+                # -------- 3) predict -----------------------------------------------------
+                action, _ = model.predict(obs_in, deterministic=True)
+
             else:
-                # Random action if no model is loaded
-                action = np.random.uniform(-1, 1, 4)
+                action = np.random.uniform(-1, 1, 4)    
 
             obs, reward, terminated, truncated, info = env.step(action)
             episode_reward += reward
@@ -482,88 +496,267 @@ def manual_control(max_steps=100000):
 
     env.close()
 
+class TrajectoryReward(gym.Wrapper):
+    def __init__(self, env, waypoints, proximity=0.3):
+        super().__init__(env)
+        self.waypoints = np.asarray(waypoints)
+        self.idx = 0
+        self.proximity = proximity
 
-def plot_trajectory(trajectory):
+    def reset(self, **kwargs):
+        self.idx = 0
+        obs, info = self.env.reset(**kwargs)
+        return obs, info
+
+    def step(self, action):
+        obs, _, terminated, truncated, info = self.env.step(action)
+
+        pos = np.array([obs["x"][0], obs["y"][0], obs["z"][0]])
+        target = self.waypoints[self.idx]
+
+        # distance‑based reward (closer is better)
+        dist = np.linalg.norm(pos - target)
+        reward = -dist
+
+        # small bonus for heading roughly along the path
+        if self.idx < len(self.waypoints) - 1:
+            desired_vec = self.waypoints[self.idx + 1] - target
+            heading_vec = np.array([np.cos(obs["theta"][0]), np.sin(obs["theta"][0]), 0])
+            reward += 0.1 * np.dot(desired_vec[:2], heading_vec[:2]) / (np.linalg.norm(desired_vec[:2]) + 1e-6)
+
+        # progress to next waypoint
+        if dist < self.proximity:
+            reward += 10                      # waypoint bonus
+            self.idx += 1
+            if self.idx == len(self.waypoints):
+                terminated = True             # finished!
+
+        return obs, reward, terminated, truncated, info
+
+def train_rl_agent(
+    algorithm: str,
+    total_timesteps: int,
+    save_model_path: str,
+    normalize: bool = False,
+    trajectory_file: str | None = None,
+    max_steps: int = 100_000,
+    eval_freq: int = 25_000,
+) -> None:
     """
-    Plot the inputted trajectory in 3D space.
+    Train an RL policy on **BlueRov-v0** with Stable‑Baselines3.
 
-    Args:
-        trajectory (numpy.ndarray): Array of shape (num_points, 3) containing x, y, z coordinates.
+    Parameters
+    ----------
+    algorithm : str
+        One of {"ppo", "sac", "td3", "a2c"} (case‑insensitive).
+    total_timesteps : int
+        Number of environment timesteps to train for.
+    save_model_path : str
+        Directory prefix where the model.zip *and* (optionally) vec_normalize.pkl
+        will be written.  If the directory does not exist, it is created.
+    normalize : bool, default=False
+        Wrap the env with VecNormalize (recommended for continuous control).
+    trajectory_file : str | None
+        (Optional) CSV of way‑points – for training.
+    max_steps : int
+        Per‑episode time‑limit passed to the env.
+    eval_freq : int
+        Evaluate/Checkpoint every `eval_freq` timesteps.
+    ---------------------------------------------------------------------------
+    How to run
+    ----------
+    python main.py --train --algorithm ppo --total-timesteps 2_000_000 \\
+                   --save-model models/ppo_bluerov --normalize
+
+    # Resume (will load model.zip + (optional) vec_normalize.pkl automatically)
+    python main.py --train --algorithm ppo --total-timesteps 1_000_000 \\
+                   --save-model models/ppo_bluerov --normalize
     """
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
 
-    # Extract x, y, z coordinates
-    x = trajectory[:, 0]
-    y = trajectory[:, 1]
-    z = trajectory[:, 2]
+    algorithm = algorithm.lower()
+    if algorithm not in ALGO_MAP:
+        raise ValueError(f"Unsupported algorithm: {algorithm}")
 
-    # Plot the trajectory
-    ax.plot(x, y, z, label='Trajectory', color='blue')
+    save_dir = Path(save_model_path).expanduser().resolve()
+    save_dir.mkdir(parents=True, exist_ok=True)
 
-    # Highlight start and end points
-    ax.scatter(x[0], y[0], z[0], color='green', label='Start', s=100)
-    ax.scatter(x[-1], y[-1], z[-1], color='red', label='End', s=100)
+    # ---------------- Env creation ------------------------------------------------
+    def _make_env():
+        e = gym.make("BlueRov-v0", max_episode_steps=max_steps)
+        if trajectory_file:
+            wpts = load_trajectory_from_csv(trajectory_file)
+            e = TrajectoryReward(e, wpts)
+        return e
 
-    # Set labels and title
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_title('Inputted Trajectory')
-    ax.legend()
+    if normalize:
+        env = DummyVecEnv([_make_env])
+        env = VecNormalize(env, norm_obs=True, norm_reward=True, gamma=0.99)
+    else:
+        env = DummyVecEnv([_make_env])
 
-    # Show the plot
-    plt.show()
+    if isinstance(env.observation_space, spaces.Dict):
+        policy_name = "MultiInputPolicy"      # ←  handles Dict observations
+    else:
+        policy_name = "MlpPolicy"
+
+    # ---------------- Model (create‑or‑resume) ------------------------------------
+    model_path = save_dir / "model.zip"
+    vecnorm_path = save_dir / "model_vec_normalize.pkl"
+
+    if model_path.exists():
+        print(f"Resuming training from {model_path}")
+        
+        model = ALGO_MAP[algorithm](
+            policy_name,
+            env,
+            verbose=1,
+            tensorboard_log=str(save_dir / "tb"),
+        )
+        # If we were normalising, reload stats
+        if normalize and vecnorm_path.exists():
+            print("Loading VecNormalize statistics")
+            env = VecNormalize.load(str(vecnorm_path), env)
+            env.training = True
+            env.norm_reward = True
+            model.set_env(env)
+    else:
+        print(f"Starting fresh {algorithm.upper()} training run")
+        
+        model = ALGO_MAP[algorithm](
+            policy_name,
+            env,
+            verbose=1,
+            tensorboard_log=str(save_dir / "tb"),
+        )
+
+    # ---------------- Callbacks (eval + checkpoints) ------------------------------
+    eval_env = DummyVecEnv([_make_env])
+    if normalize:
+        eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False)
+
+    checkpoint_cb = CheckpointCallback(
+        save_freq=eval_freq,
+        save_path=str(save_dir / "checkpoints"),
+        name_prefix="rl_model",
+        save_replay_buffer=True,
+        save_vecnormalize=normalize,
+    )
+    eval_cb = EvalCallback(
+        eval_env,
+        best_model_save_path=str(save_dir / "best"),
+        log_path=str(save_dir / "eval"),
+        eval_freq=eval_freq,
+        deterministic=True,
+        render=False,
+    )
+
+    # ---------------- Train --------------------------------------------------------
+    model.learn(total_timesteps=total_timesteps, callback=[checkpoint_cb, eval_cb])
 
 
-def main():
-    parser = argparse.ArgumentParser(description="BlueROV2 Control and Simulation")
+    # ---------------- Save artefacts ----------------------------------------------
+    print(f"Training finished – saving to {model_path}")
+    model.save(str(model_path))
+    if normalize:
+        env.save(str(vecnorm_path))
 
-    parser.add_argument("--file", type=str, help="Path to trajectory CSV file")
+    env.close()
+    eval_env.close()
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="BlueROV2 Control, Evaluation and Training Harness"
+    )
+
+    # Top‑level *mode*
+    parser.add_argument(
+        "--train",
+        action="store_true",
+        help="Enable training mode (default: run/evaluate).",
+    )
+
+    # Common options
     parser.add_argument(
         "--algorithm",
-        type=str,
-        choices=["pid", "ppo", "manual"],
+        type=str.lower,
+        choices=list(ALGO_MAP.keys()) + ["pid", "manual"],
         default="pid",
-        help="Control algorithm to use (pid, ppo, sac, td3, a2c, or manual)",
+        help="Control algorithm.",
     )
-
-    parser.add_argument(
-        "--model",
-        type=str,
-        help="Path to the pre-trained model (required for RL algorithms)",
-    )
-
+    parser.add_argument("--file", type=str, help="Path to trajectory CSV.")
     parser.add_argument(
         "--max-steps",
         type=int,
-        default=100000,
-        help="Maximum number of steps per episode (default: 100000)",
+        default=100_000,
+        help="Maximum steps per episode (env time‑limit).",
     )
 
-    args = parser.parse_args()
+    # ---------- (run/evaluate) specific -------------------------------------
+    parser.add_argument("--model", type=str, help="Path prefix of trained model.")
 
-    # Validate arguments
-    if (
-        args.algorithm in ["ppo"]
-        and not args.model
-        and args.algorithm != "manual"
-    ):
-        print(
-            f"Warning: No model provided for {args.algorithm}. Will run with random actions."
-        )
+    # ---------- (train) specific --------------------------------------------
+    parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        default=500_000,
+        help="Total timesteps for training (only used with --train).",
+    )
+    parser.add_argument(
+        "--save-model",
+        type=str,
+        default="models/default_bluerov_model",
+        help="Where to save checkpoints/best/model.zip (only used with --train).",
+    )
+    parser.add_argument(
+        "--normalize",
+        action="store_true",
+        help="Wrap env in VecNormalize during training.",
+    )
+    parser.add_argument(
+        "--eval-freq",
+        type=int,
+        default=25_000,
+        help="How often (timesteps) to checkpoint/evaluate when training.",
+    )
 
-    # Run the appropriate controller
-    if args.algorithm == "pid":
+    return parser.parse_args()
+
+
+
+def main():
+    args = parse_args()
+
+    # ------------------------------ PID / Manual ------------------------------
+    if args.algorithm in {"pid"} and not args.train:
         if not args.file:
-            print("Error: PID controller requires a trajectory file (--file)")
+            print("Error: --algorithm pid requires --file path/to/trajectory.csv")
             return
         run_pid_controller(args.file, args.max_steps)
-    elif args.algorithm == "manual":
+        return
+    if args.algorithm == "manual" and not args.train:
         manual_control(args.max_steps)
-    else:  # RL algorithms
-        run_rl_agent(args.algorithm, args.model, args.file, args.max_steps)
+        return
+
+    # ------------------------------ TRAIN -------------------------------------
+    if args.train:
+        train_rl_agent(
+            algorithm=args.algorithm,
+            total_timesteps=args.total_timesteps,
+            save_model_path=args.save_model,
+            normalize=args.normalize,
+            trajectory_file=args.file,
+            max_steps=args.max_steps,
+            eval_freq=args.eval_freq,
+        )
+        return
+
+    # ------------------------------ RUN / EVAL -------------------------------
+    run_rl_agent(
+        algorithm=args.algorithm,
+        model_path=args.model,
+        trajectory_file=args.file,
+        max_steps=args.max_steps,
+    )
 
 
 if __name__ == "__main__":
