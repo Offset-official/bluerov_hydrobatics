@@ -6,6 +6,7 @@ import gymnasium as gym
 import meshcat
 import meshcat.geometry as g
 import meshcat.transformations as tf
+import matplotlib.pyplot as plt
 
 import bluerov2_gym  # This import will automatically register the environment
 
@@ -480,6 +481,39 @@ def manual_control(max_steps=100000):
         step_count += 1
 
     env.close()
+
+
+def plot_trajectory(trajectory):
+    """
+    Plot the inputted trajectory in 3D space.
+
+    Args:
+        trajectory (numpy.ndarray): Array of shape (num_points, 3) containing x, y, z coordinates.
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Extract x, y, z coordinates
+    x = trajectory[:, 0]
+    y = trajectory[:, 1]
+    z = trajectory[:, 2]
+
+    # Plot the trajectory
+    ax.plot(x, y, z, label='Trajectory', color='blue')
+
+    # Highlight start and end points
+    ax.scatter(x[0], y[0], z[0], color='green', label='Start', s=100)
+    ax.scatter(x[-1], y[-1], z[-1], color='red', label='End', s=100)
+
+    # Set labels and title
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('Inputted Trajectory')
+    ax.legend()
+
+    # Show the plot
+    plt.show()
 
 
 def main():
