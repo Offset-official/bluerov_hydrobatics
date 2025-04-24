@@ -74,7 +74,10 @@ def test_agent_manual_input():
 
     for episode in range(episodes):
         obs, _ = env.reset()
+        print("Episoide", episode)
+        print(obs)
         env.render()  # Initial render
+        time.sleep(10) # for stabilization
         episode_reward = 0
         step_count = 0
 

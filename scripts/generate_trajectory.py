@@ -138,7 +138,7 @@ def save_trajectory_to_csv(trajectory, filepath):
     """
     with open(filepath, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["x", "y", "z"])  # Write header
+        # writer.writerow(["x", "y", "z"])  # Write header
         writer.writerows(trajectory)
 
     print(f"Trajectory saved to {filepath}")
