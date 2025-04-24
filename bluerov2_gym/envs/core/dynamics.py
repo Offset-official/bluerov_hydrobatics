@@ -79,7 +79,7 @@ class Dynamics:
         disturbances = self.disturbance_dist.rvs()
         dvx, dvy, dvz, domega = disturbances
 
-        # Extract action components (normalized thruster commands)
+        # Extract action components
         w_x, w_y, w_z, w_omega = action
 
         # Extract current state variables

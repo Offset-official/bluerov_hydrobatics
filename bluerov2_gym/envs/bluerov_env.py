@@ -1,11 +1,12 @@
 from importlib import resources
+from pathlib import Path
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
 from bluerov2_gym.envs.core.dynamics import Dynamics
-from bluerov2_gym.envs.core.rewards import Reward
+from bluerov2_gym.envs.core.rewards import Reward, WaypointReward
 from bluerov2_gym.envs.core.visualization.renderer import BlueRovRenderer
 
 
@@ -34,17 +35,9 @@ class BlueRov(gym.Env):
             render_mode (str, optional): Rendering mode. Use "human" for visualization.
         """
         super().__init__()
-        
-        # Load 3D model for visualization
-        with resources.path("bluerov2_gym.assets", "BlueRov2.dae") as asset_path:
-            self.model_path = str(asset_path)
-            
-        # Initialize renderer if human rendering is requested
-        if render_mode == "human":
-            self.renderer = BlueRovRenderer()
-            
-        # Initialize reward function and dynamics model
+
         self.reward_fn = Reward()
+
         self.dynamics = Dynamics()
         
         # Initialize state variables
@@ -111,7 +104,9 @@ class BlueRov(gym.Env):
             "omega": 0,
         }
 
-        # Reset the dynamics model and get distribution of possible disturbances
+        if self.waypoint_reward:
+            self.reward_fn.reset()
+
         self.disturbance_dist = self.dynamics.reset()
         
         # Convert dictionary values to numpy arrays for the observation
@@ -152,13 +147,27 @@ class BlueRov(gym.Env):
 
         truncated = False  # Episode is not truncated
 
-        return obs, reward, terminated, truncated, {}
+        info = {
+            "waypoint_progress": (
+                self.reward_fn.current_waypoint_idx / self.reward_fn.total_waypoints
+                if self.waypoint_reward
+                else 0.0
+            )
+        }
+
+        return obs, reward, terminated, truncated, info
 
     def render(self):
         """
         Render the environment if in human mode.
         """
         self.renderer.render(self.model_path)
+
+        if self.waypoint_reward and hasattr(self.reward_fn, "trajectory"):
+            self.renderer.visualize_waypoints(
+                self.reward_fn.trajectory,
+                current_idx=self.reward_fn.current_waypoint_idx,
+            )
 
     def step_sim(self):
         """
