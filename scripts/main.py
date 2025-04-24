@@ -174,10 +174,10 @@ def run_pid_controller(trajectory_file, max_steps=100000):
     visualize_trajectory(vis, waypoints)
 
     # Initialize PID controllers with tuned parameters
-    pid_x = PIDController(kp=1.2, ki=0.05, kd=0.3)
-    pid_y = PIDController(kp=1.2, ki=0.05, kd=0.3)
-    pid_z = PIDController(kp=1.5, ki=0.1, kd=0.4)
-    pid_heading = PIDController(kp=2.0, ki=0.1, kd=0.5)
+    pid_x = PIDController(kp=1.0, ki=0.0, kd=0.0)
+    pid_y = PIDController(kp=1.0, ki=0.0, kd=0.0)
+    pid_z = PIDController(kp=1.0, ki=0.0, kd=0.0)
+    pid_heading = PIDController(kp=1.0, ki=0.0, kd=0.0)
 
     # Reset all controllers
     pid_x.reset()
