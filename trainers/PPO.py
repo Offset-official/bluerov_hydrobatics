@@ -110,9 +110,9 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Train PPO on BlueROV trajectory")
     p.add_argument("--trajectory_file", type=str, required=True,
                    help="Path to trajectory CSV")
-    p.add_argument("--num_episodes", type=int, default=1000,
+    p.add_argument("--num_episodes", type=int, default=10,
                    help="Episodes (used to compute total timesteps)")
-    p.add_argument("--steps", type=int, default=1000,
+    p.add_argument("--steps", type=int, default=10,
                    help="Max env steps per episode")
     p.add_argument("--envs", type=int, default=8,
                    help="Parallel envs")
