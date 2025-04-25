@@ -175,7 +175,6 @@ class BlueRov(gym.Env):
         Render the environment if in human mode.
         """
         self.renderer.render(self.model_path, self.init_state)
-        # self.set_waypoints_visualization(self.trajectory[:, :3])
 
         if self.trajectory is not None:
             self.renderer.visualize_waypoints(
@@ -193,15 +192,3 @@ class BlueRov(gym.Env):
                 self.trajectory[:, :3],
                 current_idx=self.reward_fn.current_waypoint_idx,
             )
-
-    def set_waypoints_visualization(self, waypoints):
-        """
-        Set the trajectory waypoints for visualization.
-
-        Args:
-            waypoints (numpy.ndarray): Array of shape (num_points, 3) with x, y, z coordinates
-        """
-        if self.renderer:
-            self.renderer.set_waypoints(waypoints)
-        else:
-            raise RuntimeError("Renderer not initialized. Set render_mode to 'human'.")
