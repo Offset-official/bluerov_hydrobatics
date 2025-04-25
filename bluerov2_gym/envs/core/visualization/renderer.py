@@ -44,7 +44,7 @@ class BlueRovRenderer:
         self.vis["ground"].set_transform(ground_transform)
 
         # Add a reference frame
-        self.vis["reference_frame"].set_object(g.TriadGeometry(1.0))
+        self.vis["reference_frame"].set_object(g.triad(1.0))
 
     def step_sim(self, state):
         self.state = state  # maybe wrong. check later
