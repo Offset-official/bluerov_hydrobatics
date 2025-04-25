@@ -27,7 +27,7 @@ def calculate_heading(p1, p2):
     if abs(dx) < 1e-6 and abs(dy) < 1e-6:
         return 0
 
-    return np.arctan2(dy, dx)
+    return np.arctan2(dy, dx) - np.pi / 2
 
 
 def generate_spiral_trajectory(num_points=100, radius=5.0, depth=9.0, num_loops=3):
