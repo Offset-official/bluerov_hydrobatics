@@ -147,9 +147,9 @@ def train_command(
     gamma: float = typer.Option(0.99, help="Discount factor"),
     n_envs: int = typer.Option(8, help="Number of parallel environments"),
     render_mode: str = typer.Option(
-        None, help="Render mode for the environment (default: 'none')",
-    )
-
+        None,
+        help="Render mode for the environment (default: 'none')",
+    ),
 ):
     """Train a new model for BlueRov2 trajectory following"""
     train(
