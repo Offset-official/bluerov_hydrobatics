@@ -411,6 +411,7 @@ def manual_control(max_steps=100000):
 
     env.close()
 
+
 def main():
     parser = argparse.ArgumentParser(description="BlueROV2 Control and Simulation")
 
