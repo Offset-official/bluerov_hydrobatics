@@ -8,6 +8,7 @@ from enum import Enum
 from typing import Optional
 from datetime import datetime
 
+
 def calculate_heading(p1, p2):
     """
     Calculate heading angle (theta) between two points in the xy-plane
@@ -27,6 +28,7 @@ def calculate_heading(p1, p2):
         return 0
 
     return np.arctan2(dy, dx)
+
 
 def generate_spiral_trajectory(num_points=100, radius=5.0, depth=9.0, num_loops=3):
     """

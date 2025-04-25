@@ -30,7 +30,7 @@ def make_env(trajectory_path, waypoint_threshold, rank, seed=0):
             trajectory_path=trajectory_path,
             waypoint_reward=True,
             waypoint_threshold=waypoint_threshold,
-            render_mode=None, 
+            render_mode=None,
         )
         env = Monitor(env)
         env.reset(seed=seed + rank)

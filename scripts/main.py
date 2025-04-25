@@ -82,7 +82,6 @@ def calculate_heading(p1, p2):
     return np.arctan2(dy, dx)
 
 
-
 def run_pid_controller(trajectory_file, max_steps=100000):
     # Define trajectory
     waypoints = load_trajectory_from_csv(trajectory_file)
@@ -91,7 +90,12 @@ def run_pid_controller(trajectory_file, max_steps=100000):
         return
 
     # Create the environment with rendering enabled and increased time limit
-    env = gym.make("BlueRov-v0", render_mode="human",trajectory_file = trajectory_file, max_episode_steps=max_steps)
+    env = gym.make(
+        "BlueRov-v0",
+        render_mode="human",
+        trajectory_file=trajectory_file,
+        max_episode_steps=max_steps,
+    )
 
     obs = env.reset()[0]
     env.render()
@@ -415,7 +419,7 @@ def plot_trajectory(trajectory):
         trajectory (numpy.ndarray): Array of shape (num_points, 3) containing x, y, z coordinates.
     """
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection="3d")
 
     # Extract x, y, z coordinates
     x = trajectory[:, 0]
@@ -423,17 +427,17 @@ def plot_trajectory(trajectory):
     z = trajectory[:, 2]
 
     # Plot the trajectory
-    ax.plot(x, y, z, label='Trajectory', color='blue')
+    ax.plot(x, y, z, label="Trajectory", color="blue")
 
     # Highlight start and end points
-    ax.scatter(x[0], y[0], z[0], color='green', label='Start', s=100)
-    ax.scatter(x[-1], y[-1], z[-1], color='red', label='End', s=100)
+    ax.scatter(x[0], y[0], z[0], color="green", label="Start", s=100)
+    ax.scatter(x[-1], y[-1], z[-1], color="red", label="End", s=100)
 
     # Set labels and title
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_title('Inputted Trajectory')
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title("Inputted Trajectory")
     ax.legend()
 
     # Show the plot
@@ -469,11 +473,7 @@ def main():
     args = parser.parse_args()
 
     # Validate arguments
-    if (
-        args.algorithm in ["ppo"]
-        and not args.model
-        and args.algorithm != "manual"
-    ):
+    if args.algorithm in ["ppo"] and not args.model and args.algorithm != "manual":
         print(
             f"Warning: No model provided for {args.algorithm}. Will run with random actions."
         )
