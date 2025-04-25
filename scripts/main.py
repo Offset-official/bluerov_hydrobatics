@@ -148,9 +148,9 @@ def run_pid_controller(trajectory_file, max_steps=100000):
             path_heading = calculate_heading(current_pos, target_waypoint)
 
         # Calculate position errors
-        error_x = target_waypoint[0] - current_pos[0]
-        error_y = target_waypoint[1] - current_pos[1]
-        error_z = target_waypoint[2] - current_pos[2]
+        error_x = obs["x_offset"][0]  # Current x offset
+        error_y = obs["y_offset"][0]
+        error_z = obs["z_offset"][0]  # Current z offset
 
         # Calculate heading error (accounting for angle wrapping)
         error_heading = np.arctan2(
