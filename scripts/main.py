@@ -188,7 +188,6 @@ def run_pid_controller(trajectory_file, max_steps=100000):
 
         obs, reward, terminated, truncated, info = env.step(action)
         print(f"Reward: {reward:.2f}")
-        env.unwrapped.step_sim()
 
         # Print status
         distance_to_target = np.linalg.norm(current_pos - target_waypoint)
