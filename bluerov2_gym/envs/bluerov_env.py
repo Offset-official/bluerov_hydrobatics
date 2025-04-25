@@ -6,7 +6,7 @@ import numpy as np
 from gymnasium import spaces
 
 from bluerov2_gym.envs.core.dynamics import Dynamics
-from bluerov2_gym.envs.core.rewards import Reward
+from bluerov2_gym.envs.core.rewards import Reward, WayPointReward
 from bluerov2_gym.envs.core.visualization.renderer import BlueRovRenderer
 
 
@@ -57,7 +57,10 @@ class BlueRov(gym.Env):
             init_theta = 0
             self.trajectory = None
 
-        self.reward_fn = Reward()
+        if self.trajectory is not None:
+            self.reward_fn = WayPointReward(self.trajectory)
+        else:
+            self.reward_fn = Reward()
 
         self.dynamics = Dynamics()
         
@@ -153,12 +156,12 @@ class BlueRov(gym.Env):
             terminated = True
 
         truncated = False  # Episode is not truncated
-
+        if self.trajectory is not None:
+            waypoint_progress = self.reward_fn.current_waypoint_idx / self.reward_fn.total_waypoints 
+        
         info = {
             "waypoint_progress": (
-                self.reward_fn.current_waypoint_idx / self.reward_fn.total_waypoints
-                if self.waypoint_reward
-                else 0.0
+                waypoint_progress if self.trajectory is not None else 0.0
             )
         }
 
@@ -169,19 +172,24 @@ class BlueRov(gym.Env):
         Render the environment if in human mode.
         """
         self.renderer.render(self.model_path, self.init_state)
-        self.set_waypoints_visualization(self.trajectory[:, :3])
+        #self.set_waypoints_visualization(self.trajectory[:, :3])
 
-        # if self.waypoint_reward and hasattr(self.reward_fn, "trajectory"):
-        #     self.renderer.visualize_waypoints(
-        #         self.reward_fn.trajectory,
-        #         current_idx=self.reward_fn.current_waypoint_idx,
-        #     )
+        if self.trajectory is not None:
+            self.renderer.visualize_waypoints(
+                self.trajectory[:, :3],
+                current_idx=self.reward_fn.current_waypoint_idx,
+            )
 
     def step_sim(self):
         """
         Update the visualization with the current state.
         """
         self.renderer.step_sim(self.state)
+        if self.trajectory is not None:
+            self.renderer.visualize_waypoints(
+                self.trajectory[:, :3],
+                current_idx=self.reward_fn.current_waypoint_idx,
+            )
 
 
     def set_waypoints_visualization(self, waypoints):

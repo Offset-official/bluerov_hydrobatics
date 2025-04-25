@@ -78,8 +78,6 @@ class BlueRovRenderer:
         if self.render_mode != "human":
             return
 
-        # Clear previous waypoints
-        self.vis["waypoints"].delete()
 
         for i, point in enumerate(waypoints):
             sphere = g.Sphere(0.1)
