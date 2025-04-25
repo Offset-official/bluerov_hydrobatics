@@ -18,10 +18,10 @@ def load_trajectory_from_csv(file_path):
     Load trajectory waypoints from a CSV file
 
     Args:
-        file_path: Path to the CSV file containing x, y, z, heading coordinates
+        file_path: Path to the CSV file containing x, y, z, coordinates and heading angle in rad
 
     Returns:
-        numpy array of shape (num_points, 3) containing x, y, z, heading coordinates
+        numpy array of shape (num_points, 4) containing x, y, z, heading (rad)
     """
     waypoints = []
     with open(file_path, "r") as f:
