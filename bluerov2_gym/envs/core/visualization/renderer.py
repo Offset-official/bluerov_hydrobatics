@@ -15,7 +15,7 @@ class BlueRovRenderer:
         self.vis = meshcat.Visualizer()
         self.vis.open()
 
-    def render(self, model_path):
+    def render(self, model_path,init_state):
         if self.render_mode != "human":
             return
         water_surface = g.Box([30, 30, 0.01])
@@ -36,6 +36,8 @@ class BlueRovRenderer:
             g.DaeMeshGeometry.from_file(model_path),
             g.MeshLambertMaterial(color=0x0000FF, wireframe=False),
         )
+        # cheeky fix to position the model correctly
+        self.step_sim(init_state)
 
         ground = g.Box([30, 30, 0.01])
         ground_material = g.MeshPhongMaterial(color=0x808080, side="DoubleSide")
@@ -80,17 +82,15 @@ class BlueRovRenderer:
         self.vis["waypoints"].delete()
 
         for i, point in enumerate(waypoints):
+            sphere = g.Sphere(0.1)
             if i < current_idx:
-                # Past waypoints (reached) - small green
-                sphere = g.Sphere(0.1)
+                # Past waypoints (reached) - green
                 material = g.MeshPhongMaterial(color=0x00FF00)
             elif i == current_idx:
-                # Current waypoint - larger yellow
-                sphere = g.Sphere(0.3)
+                # Current waypoint - yellow
                 material = g.MeshPhongMaterial(color=0xFFFF00)
             else:
-                # Future waypoints - small white
-                sphere = g.Sphere(0.1)
+                # Future waypoints - white
                 material = g.MeshPhongMaterial(color=0xFFFFFF)
 
             self.vis[f"waypoints/point_{i}"].set_object(sphere, material)
