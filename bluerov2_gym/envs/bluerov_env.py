@@ -6,7 +6,7 @@ import numpy as np
 from gymnasium import spaces
 
 from bluerov2_gym.envs.core.dynamics import Dynamics
-from bluerov2_gym.envs.core.rewards import Reward, WaypointReward
+from bluerov2_gym.envs.core.rewards import Reward
 from bluerov2_gym.envs.core.visualization.renderer import BlueRovRenderer
 
 
@@ -35,6 +35,13 @@ class BlueRov(gym.Env):
             render_mode (str, optional): Rendering mode. Use "human" for visualization.
         """
         super().__init__()
+
+
+        if render_mode is not None:
+ 
+            with resources.path("bluerov2_gym.assets", "BlueRov2.dae") as asset_path:
+                self.model_path = str(asset_path)
+            self.renderer = BlueRovRenderer()
 
         self.reward_fn = Reward()
 
@@ -104,9 +111,6 @@ class BlueRov(gym.Env):
             "omega": 0,
         }
 
-        if self.waypoint_reward:
-            self.reward_fn.reset()
-
         self.disturbance_dist = self.dynamics.reset()
         
         # Convert dictionary values to numpy arrays for the observation
@@ -163,11 +167,11 @@ class BlueRov(gym.Env):
         """
         self.renderer.render(self.model_path)
 
-        if self.waypoint_reward and hasattr(self.reward_fn, "trajectory"):
-            self.renderer.visualize_waypoints(
-                self.reward_fn.trajectory,
-                current_idx=self.reward_fn.current_waypoint_idx,
-            )
+        # if self.waypoint_reward and hasattr(self.reward_fn, "trajectory"):
+        #     self.renderer.visualize_waypoints(
+        #         self.reward_fn.trajectory,
+        #         current_idx=self.reward_fn.current_waypoint_idx,
+        #     )
 
     def step_sim(self):
         """
