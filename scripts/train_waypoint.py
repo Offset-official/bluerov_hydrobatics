@@ -14,7 +14,7 @@ from stable_baselines3.common.utils import set_random_seed
 from bluerov2_gym.training.callbacks import WaypointTrainingCallback
 
 
-def make_env(trajectory_path, waypoint_threshold, rank, seed=0):
+def make_env(trajectory_path, render_mode, rank, seed=0):
     """
     Utility function for multiprocessed env.
 
@@ -27,10 +27,8 @@ def make_env(trajectory_path, waypoint_threshold, rank, seed=0):
     def _init():
         env = gym.make(
             "BlueRov-v0",
-            trajectory_path=trajectory_path,
-            waypoint_reward=True,
-            waypoint_threshold=waypoint_threshold,
-            render_mode=None,
+            trajectory_file=trajectory_path,
+            render_mode=render_mode,
         )
         env = Monitor(env)
         env.reset(seed=seed + rank)
@@ -51,6 +49,7 @@ def train(
     gamma: float = 0.99,
     waypoint_threshold: float = 0.01,
     n_envs: int = 8,
+    render_mode: str = "none",
 ):
     """
     Train an agent to follow a trajectory using PPO with parallel environments
@@ -82,7 +81,7 @@ def train(
 
     # Create vectorized environment with multiple parallel envs
     env = SubprocVecEnv(
-        [make_env(trajectory_path, waypoint_threshold, i) for i in range(n_envs)]
+        [make_env(trajectory_path, render_mode, i) for i in range(n_envs)]
     )
     env = VecNormalize(env, norm_obs=True, norm_reward=True)
 
@@ -147,6 +146,10 @@ def train_command(
     ),
     gamma: float = typer.Option(0.99, help="Discount factor"),
     n_envs: int = typer.Option(8, help="Number of parallel environments"),
+    render_mode: str = typer.Option(
+        None, help="Render mode for the environment (default: 'none')",
+    )
+
 ):
     """Train a new model for BlueRov2 trajectory following"""
     train(
@@ -160,6 +163,7 @@ def train_command(
         n_epochs=n_epochs,
         gamma=gamma,
         n_envs=n_envs,
+        render_mode=render_mode,
     )
 
 
