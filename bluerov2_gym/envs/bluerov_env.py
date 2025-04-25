@@ -69,7 +69,11 @@ class BlueRov(gym.Env):
             "x": init_x,  # x position (m)
             "y": init_y,  # y position (m)
             "z": init_z,  # depth (m)
+            "x_offset": 0,  # offset (m)
+            "y_offset": 0,  # offset (m)
+            "z_offset": 0,  # offset (m)
             "theta": init_theta,  # heading angle (rad)
+            "theta_offset": 0,  # offset (m)
             "vx": 0,  # x velocity (m/s)
             "vy": 0,  # y velocity (m/s)
             "vz": 0,  # vertical velocity (m/s)
@@ -92,7 +96,13 @@ class BlueRov(gym.Env):
                 "x": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
                 "y": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
                 "z": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
+                "x_offset": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
+                "y_offset": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
+                "z_offset": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
                 "theta": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
+                "theta_offset": spaces.Box(
+                    -np.inf, np.inf, shape=(1,), dtype=np.float32
+                ),
                 "vx": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
                 "vy": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
                 "vz": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
@@ -145,6 +155,28 @@ class BlueRov(gym.Env):
 
         # Format observation as required by Gymnasium
         obs = {k: np.array([v], dtype=np.float32) for k, v in self.state.items()}
+
+        if self.trajectory is not None:
+            # Add offsets to the observation
+            current_waypoint_idx = self.reward_fn.current_waypoint_idx
+            waypoint = self.trajectory[current_waypoint_idx]
+            obs["x_offset"] = np.array(
+                [waypoint[0] - self.state["x"]], dtype=np.float32
+            )
+            obs["y_offset"] = np.array(
+                [waypoint[1] - self.state["y"]], dtype=np.float32
+            )
+            obs["z_offset"] = np.array(
+                [waypoint[2] - self.state["z"]], dtype=np.float32
+            )
+            obs["theta_offset"] = np.array(
+                [waypoint[3] - self.state["theta"]], dtype=np.float32
+            )
+        else:
+            obs["x_offset"] = np.array([0.0], dtype=np.float32)
+            obs["y_offset"] = np.array([0.0], dtype=np.float32)
+            obs["z_offset"] = np.array([0.0], dtype=np.float32)
+            obs["theta_offset"] = np.array([0.0], dtype=np.float32)
 
         # Calculate reward based on current state
         reward = self.reward_fn.get_reward(obs)
