@@ -41,6 +41,7 @@ class BlueRov(gym.Env):
             with resources.path("bluerov2_gym.assets", "BlueRov2.dae") as asset_path:
                 self.model_path = str(asset_path)
             self.renderer = BlueRovRenderer()
+            self.render_mode = render_mode
 
         if trajectory_file is not None:
             self.trajectory = np.loadtxt(trajectory_file, delimiter=",")
@@ -103,6 +104,9 @@ class BlueRov(gym.Env):
         self.dt = 0.1  # Time step (seconds)
         self.render_mode = render_mode
         self.trajectory_file = trajectory_file
+
+        if self.render_mode == "human":
+            self.render()
 
     def reset(self, *, seed=None, options=None):
         """
@@ -167,6 +171,9 @@ class BlueRov(gym.Env):
                 waypoint_progress if self.trajectory is not None else 0.0
             )
         }
+
+        if self.render_mode == "human":
+            self.step_sim()
 
         return obs, reward, terminated, truncated, info
 
