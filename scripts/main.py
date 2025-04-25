@@ -98,7 +98,6 @@ def run_pid_controller(trajectory_file, max_steps=100000):
     )
 
     obs = env.reset()[0]
-    env.render()
 
     # Initialize PID controllers with tuned parameters
     pid_x = PIDController(kp=1.0, ki=0.0, kd=0.0)
