@@ -27,6 +27,7 @@ class Reward:
 
         return reward
 
+
 class WayPointReward:
     def __init__(self, waypoints, threshold=0.1):
         """
@@ -52,7 +53,7 @@ class WayPointReward:
         orientation_error = abs(obs["theta"][0] - current_waypoint[3])
 
         # Check if the waypoint is reached
-        if position_error < self.threshold: 
+        if position_error < self.threshold:
             self.current_waypoint_idx += 1
 
         return -(position_error + orientation_error)

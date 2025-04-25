@@ -15,7 +15,7 @@ class BlueRovRenderer:
         self.vis = meshcat.Visualizer()
         self.vis.open()
 
-    def render(self, model_path,init_state):
+    def render(self, model_path, init_state):
         if self.render_mode != "human":
             return
         water_surface = g.Box([30, 30, 0.01])
@@ -77,7 +77,6 @@ class BlueRovRenderer:
         """
         if self.render_mode != "human":
             return
-
 
         for i, point in enumerate(waypoints):
             sphere = g.Sphere(0.1)

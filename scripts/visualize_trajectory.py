@@ -31,7 +31,12 @@ def load_trajectory_from_csv(file_path):
         for row in reader:
             if len(row) >= 4:
                 try:
-                    x, y, z, theta = float(row[0]), float(row[1]), float(row[2]), float(row[3])
+                    x, y, z, theta = (
+                        float(row[0]),
+                        float(row[1]),
+                        float(row[2]),
+                        float(row[3]),
+                    )
                     waypoints.append([x, y, z, theta])
                 except ValueError:
                     print(f"Warning: Skipping invalid row {row}")

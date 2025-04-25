@@ -17,10 +17,8 @@ from bluerov2_gym.envs.bluerov_env import BlueRov
 # --------------------------------------------------------------------------- #
 def make_env(render_mode, trajectory_file):
     def _init():
-        return BlueRov(
-            render_mode=render_mode,
-            trajectory_file=trajectory_file
-        )
+        return BlueRov(render_mode=render_mode, trajectory_file=trajectory_file)
+
     return _init
 
 
@@ -54,18 +52,20 @@ def start_ppo_training(
     # ---------- bookkeeping ----------
     run_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = os.path.join("runs", f"PPO_BlueROV_{run_tag}")
-    best_dir = os.path.join(out_dir, "best"); ckpt_dir = os.path.join(out_dir, "ckpt")
-    os.makedirs(best_dir, exist_ok=True); os.makedirs(ckpt_dir, exist_ok=True)
+    best_dir = os.path.join(out_dir, "best")
+    ckpt_dir = os.path.join(out_dir, "ckpt")
+    os.makedirs(best_dir, exist_ok=True)
+    os.makedirs(ckpt_dir, exist_ok=True)
 
     # ---------- vectorised envs ----------
-    env     = DummyVecEnv([make_env(None, trajectory_file) for _ in range(n_envs)])
+    env = DummyVecEnv([make_env(None, trajectory_file) for _ in range(n_envs)])
     evalenv = DummyVecEnv([make_env(render_mode_eval, trajectory_file)])
 
     # ---------- PPO agent ----------
     model = PPO(
         policy="MultiInputPolicy",
         env=env,
-        n_steps=2048 // n_envs,   # roll-out per env
+        n_steps=2048 // n_envs,  # roll-out per env
         batch_size=256,
         learning_rate=3e-4,
         gamma=0.99,
@@ -73,7 +73,7 @@ def start_ppo_training(
         clip_range=0.2,
         tensorboard_log=os.path.join(out_dir, "tb"),
         device="cuda" if torch.cuda.is_available() else "cpu",
-        verbose=1
+        verbose=1,
     )
 
     # ---------- callbacks ----------
@@ -86,20 +86,19 @@ def start_ppo_training(
         deterministic=True,
     )
     ckpt_cb = CheckpointCallback(
-        save_freq=10_000,
-        save_path=ckpt_dir,
-        name_prefix="ppo_bluerov"
+        save_freq=10_000, save_path=ckpt_dir, name_prefix="ppo_bluerov"
     )
 
     # ---------- learn ----------
     total_steps = num_episodes * steps
-    model.learn(total_timesteps=total_steps,
-                callback=[eval_cb, ckpt_cb],
-                progress_bar=True)
+    model.learn(
+        total_timesteps=total_steps, callback=[eval_cb, ckpt_cb], progress_bar=True
+    )
 
     # ---------- save ----------
     model.save(os.path.join(out_dir, "final_ppo_policy"))
-    env.close(); evalenv.close()
+    env.close()
+    evalenv.close()
     print(f"\nTraining complete – artefacts in {out_dir}")
 
 
@@ -108,15 +107,18 @@ def start_ppo_training(
 # --------------------------------------------------------------------------- #
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Train PPO on BlueROV trajectory")
-    p.add_argument("--trajectory_file", type=str, required=True,
-                   help="Path to trajectory CSV")
-    p.add_argument("--num_episodes", type=int, default=10,
-                   help="Episodes (used to compute total timesteps)")
-    p.add_argument("--steps", type=int, default=10,
-                   help="Max env steps per episode")
-    p.add_argument("--envs", type=int, default=8,
-                   help="Parallel envs")
-    
+    p.add_argument(
+        "--trajectory_file", type=str, required=True, help="Path to trajectory CSV"
+    )
+    p.add_argument(
+        "--num_episodes",
+        type=int,
+        default=10,
+        help="Episodes (used to compute total timesteps)",
+    )
+    p.add_argument("--steps", type=int, default=10, help="Max env steps per episode")
+    p.add_argument("--envs", type=int, default=8, help="Parallel envs")
+
     args = p.parse_args()
 
     trajectory = np.loadtxt(args.trajectory_file, delimiter=",")
@@ -126,4 +128,3 @@ if __name__ == "__main__":
         steps=args.steps,
         n_envs=args.envs,
     )
-

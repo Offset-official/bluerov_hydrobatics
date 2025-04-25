@@ -9,16 +9,19 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 import time
 from bluerov2_gym.envs.bluerov_env import BlueRov
 
+
 # --------------------------------------------------------------------------- #
 # Helper: build a single-env VecEnv so SB3 APIs stay happy
 # --------------------------------------------------------------------------- #
 def make_env(render_mode, trajectory_file):
     def _init():
         return BlueRov(
-            render_mode=render_mode,     # "human" to see the sim, None for headless
-            trajectory_file=trajectory_file
+            render_mode=render_mode,  # "human" to see the sim, None for headless
+            trajectory_file=trajectory_file,
         )
+
     return _init
+
 
 ALGOS = {
     "ppo": PPO,
@@ -27,6 +30,7 @@ ALGOS = {
     "a2c": A2C,
     "ddpg": DDPG,
 }
+
 
 def run_policy(
     algo: str,
@@ -43,7 +47,9 @@ def run_policy(
         raise ValueError(f"Unknown algorithm: {algo}. Choose from {list(ALGOS.keys())}")
     env = make_env(render_mode, trajectory_file)()
     ModelClass = ALGOS[algo]
-    model = ModelClass.load(model_path, env=env, device="cuda" if torch.cuda.is_available() else "cpu")
+    model = ModelClass.load(
+        model_path, env=env, device="cuda" if torch.cuda.is_available() else "cpu"
+    )
     episode_returns = []
     env.unwrapped.set_waypoints_visualization(trajectory_file)
     for ep in range(episodes):
@@ -66,11 +72,22 @@ def run_policy(
     print(f"  Mean return: {np.mean(episode_returns):.2f}")
     print(f"  Std  return: {np.std(episode_returns):.2f}")
 
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Run a trained RL policy on BlueROV")
-    p.add_argument("--algo", type=str, required=True, choices=list(ALGOS.keys()), help="RL algorithm to use")
-    p.add_argument("--model", required=True, help="Path to model (e.g. runs/.../best_model.zip)")
-    p.add_argument("--trajectory_file", required=True, help="CSV with (x,y,z) way-points")
+    p.add_argument(
+        "--algo",
+        type=str,
+        required=True,
+        choices=list(ALGOS.keys()),
+        help="RL algorithm to use",
+    )
+    p.add_argument(
+        "--model", required=True, help="Path to model (e.g. runs/.../best_model.zip)"
+    )
+    p.add_argument(
+        "--trajectory_file", required=True, help="CSV with (x,y,z) way-points"
+    )
     p.add_argument("--episodes", type=int, default=3, help="How many rollouts to run")
     p.add_argument("--max_steps", type=int, default=1000, help="Step limit per episode")
     p.add_argument("--no_render", action="store_true", help="Disable visual rendering")
