@@ -234,7 +234,12 @@ def run_pid_controller(trajectory_file, max_steps=100000):
 def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100000):
     """Run BlueROV with a specified RL algorithm"""
     # Create the environment with rendering enabled and increased step limit
-    env = gym.make("BlueRov-v0", render_mode="human", max_episode_steps=max_steps)
+    env = gym.make(
+        "BlueRov-v0",
+        render_mode="human",
+        trajectory_file=trajectory_file,
+        max_episode_steps=max_steps,
+    )
 
     # If trajectory file is provided, visualize it
     if trajectory_file:
@@ -242,10 +247,6 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
         if len(waypoints) > 0:
             obs, _ = env.reset()
             vis = env.unwrapped.renderer.vis
-            visualize_trajectory(vis, waypoints)
-
-            # Optionally, start from first waypoint
-            obs = set_initial_state(env, waypoints)
         else:
             obs, _ = env.reset()
     else:
@@ -409,40 +410,6 @@ def manual_control(max_steps=100000):
         step_count += 1
 
     env.close()
-
-
-def plot_trajectory(trajectory):
-    """
-    Plot the inputted trajectory in 3D space.
-
-    Args:
-        trajectory (numpy.ndarray): Array of shape (num_points, 3) containing x, y, z coordinates.
-    """
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-
-    # Extract x, y, z coordinates
-    x = trajectory[:, 0]
-    y = trajectory[:, 1]
-    z = trajectory[:, 2]
-
-    # Plot the trajectory
-    ax.plot(x, y, z, label="Trajectory", color="blue")
-
-    # Highlight start and end points
-    ax.scatter(x[0], y[0], z[0], color="green", label="Start", s=100)
-    ax.scatter(x[-1], y[-1], z[-1], color="red", label="End", s=100)
-
-    # Set labels and title
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-    ax.set_title("Inputted Trajectory")
-    ax.legend()
-
-    # Show the plot
-    plt.show()
-
 
 def main():
     parser = argparse.ArgumentParser(description="BlueROV2 Control and Simulation")
