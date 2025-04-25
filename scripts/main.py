@@ -112,7 +112,7 @@ def run_pid_controller(trajectory_file, max_steps=100000):
     dt = 0.1
 
     # Proximity threshold to consider a waypoint reached
-    proximity_threshold = 0.3
+    proximity_threshold = 0.1
 
     # Current waypoint index (start at 1 since we're already at waypoint 0)
     current_waypoint_idx = 1
@@ -183,6 +183,7 @@ def run_pid_controller(trajectory_file, max_steps=100000):
         )
 
         obs, reward, terminated, truncated, info = env.step(action)
+        print(f"Reward: {reward:.2f}")
         env.unwrapped.step_sim()
 
         # Print status
