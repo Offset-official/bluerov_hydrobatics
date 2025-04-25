@@ -82,74 +82,6 @@ def calculate_heading(p1, p2):
     return np.arctan2(dy, dx)
 
 
-def visualize_trajectory(vis, trajectory):
-    """Visualize trajectory as points and lines in Meshcat"""
-    points = np.array(trajectory).reshape(-1, 3)
-
-    if len(points) > 1:
-        # Add white markers for each waypoint
-        for i, point in enumerate(points):
-            # Special markers for start and end points
-            if i == 0:
-                # Start marker (green)
-                vis["markers/start"].set_object(
-                    g.Sphere(0.2), g.MeshPhongMaterial(color=0x00FF00)
-                )
-                vis["markers/start"].set_transform(tf.translation_matrix(point))
-            elif i == len(points) - 1:
-                # End marker (red)
-                vis["markers/end"].set_object(
-                    g.Sphere(0.2), g.MeshPhongMaterial(color=0xFF0000)
-                )
-                vis["markers/end"].set_transform(tf.translation_matrix(point))
-            else:
-                # Small white marker for intermediate waypoints
-                vis[f"markers/waypoint_{i}"].set_object(
-                    g.Sphere(0.1), g.MeshPhongMaterial(color=0xFFFFFF)
-                )
-                vis[f"markers/waypoint_{i}"].set_transform(tf.translation_matrix(point))
-
-        # Draw lines connecting waypoints
-        line_points = []
-        for i in range(len(points) - 1):
-            line_points.append(points[i])
-            line_points.append(points[i + 1])
-
-        line_vertices = np.array(line_points)
-        vis["trajectory/path"].set_object(
-            g.LineSegments(
-                g.PointsGeometry(position=line_vertices),
-                g.LineBasicMaterial(color=0xFFFF00),
-            )
-        )
-
-
-def set_initial_state(env, waypoints):
-    start_point = waypoints[0]
-    next_point = waypoints[1]
-    initial_heading = calculate_heading(start_point, next_point)
-    try:
-        env.unwrapped.state = {
-            "x": start_point[0],
-            "y": start_point[1],
-            "z": start_point[2],
-            "theta": initial_heading,
-            "vx": 0,
-            "vy": 0,
-            "vz": 0,
-            "omega": 0,
-        }
-
-        obs = {
-            k: np.array([v], dtype=np.float32) for k, v in env.unwrapped.state.items()
-        }
-        env.unwrapped.step_sim()
-        return obs
-    except AttributeError:
-        # If setting state directly doesn't work, just reset the environment
-        print("Warning: Could not set initial state directly, using default reset")
-        return env.reset()[0]
-
 
 def run_pid_controller(trajectory_file, max_steps=100000):
     # Define trajectory
@@ -159,19 +91,10 @@ def run_pid_controller(trajectory_file, max_steps=100000):
         return
 
     # Create the environment with rendering enabled and increased time limit
-    env = gym.make("BlueRov-v0", render_mode="human", max_episode_steps=max_steps)
+    env = gym.make("BlueRov-v0", render_mode="human",trajectory_file = trajectory_file, max_episode_steps=max_steps)
 
-    env.reset()
+    obs = env.reset()[0]
     env.render()
-
-    # Set initial state based on trajectory
-    obs = set_initial_state(env, waypoints)
-
-    # Access the visualizer
-    vis = env.unwrapped.renderer.vis
-
-    # Visualize the trajectory
-    visualize_trajectory(vis, waypoints)
 
     # Initialize PID controllers with tuned parameters
     pid_x = PIDController(kp=1.0, ki=0.0, kd=0.0)

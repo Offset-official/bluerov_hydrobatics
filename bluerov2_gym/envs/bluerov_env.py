@@ -43,21 +43,37 @@ class BlueRov(gym.Env):
                 self.model_path = str(asset_path)
             self.renderer = BlueRovRenderer()
 
+        if trajectory_file is not None:
+            self.trajectory = np.loadtxt(trajectory_file, delimiter=",")
+            print(f"Loaded trajectory with {self.trajectory.shape[0]} waypoints")
+            init_x = self.trajectory[0, 0]
+            init_y = self.trajectory[0, 1]
+            init_z = self.trajectory[0, 2]
+            init_theta = self.trajectory[0, 3]
+        else:
+            init_x = 0
+            init_y = 0
+            init_z = 0
+            init_theta = 0
+            self.trajectory = None
+
         self.reward_fn = Reward()
 
         self.dynamics = Dynamics()
         
         # Initialize state variables
         self.state = {
-            "x": 0,      # x position (m)
-            "y": 0,      # y position (m)
-            "z": 0,      # depth (m)
-            "theta": 0,  # heading angle (rad)
+            "x": init_x,      # x position (m)
+            "y": init_y,      # y position (m)
+            "z": init_z,      # depth (m)
+            "theta": init_theta,  # heading angle (rad)
             "vx": 0,     # x velocity (m/s)
             "vy": 0,     # y velocity (m/s)
             "vz": 0,     # vertical velocity (m/s)
             "omega": 0,  # angular velocity (rad/s)
         }
+
+        self.init_state = self.state
 
         # Define action space: 4 normalized thruster commands between -1.0 and 1.0
         self.action_space = spaces.Box(
@@ -99,17 +115,7 @@ class BlueRov(gym.Env):
         """
         super().reset(seed=seed)
 
-        # Reset state to initial conditions (at origin with zero velocity)
-        self.state = {
-            "x": 0,
-            "y": 0,
-            "z": 0,
-            "theta": 0,
-            "vx": 0,
-            "vy": 0,
-            "vz": 0,
-            "omega": 0,
-        }
+        self.state = self.init_state
 
         self.disturbance_dist = self.dynamics.reset()
         
@@ -135,10 +141,7 @@ class BlueRov(gym.Env):
         obs = {k: np.array([v], dtype=np.float32) for k, v in self.state.items()}
 
         # Calculate reward based on current state
-        if self.trajectory_file is not None:
-            reward = self.reward_fn.get_reward_trajectory(obs, action, self.trajectory_file)
-        else:
-            reward = self.reward_fn.get_reward(obs)
+        reward = self.reward_fn.get_reward(obs)
 
         # Determine if episode should terminate
         terminated = False
@@ -165,7 +168,8 @@ class BlueRov(gym.Env):
         """
         Render the environment if in human mode.
         """
-        self.renderer.render(self.model_path)
+        self.renderer.render(self.model_path, self.init_state)
+        self.set_waypoints_visualization(self.trajectory[:, :3])
 
         # if self.waypoint_reward and hasattr(self.reward_fn, "trajectory"):
         #     self.renderer.visualize_waypoints(
