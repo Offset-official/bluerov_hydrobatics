@@ -26,7 +26,30 @@ class Reward:
         )
 
         return reward
+    
+class PointReward:
+    def __init__(self, point, threshold=0.1):
+        """
+        Initialize the PointReward class.
+        point: numpy array of shape (4,) containing x, y, z coordinates and heading angle (rad)
+        """
+        self.point = point
+        self.threshold = threshold
+        
+    def get_reward(self, state):
+        position_error = np.sqrt(
+            (state["x"] - self.point[0]) ** 2
+            + (state["y"] - self.point[1]) ** 2
+            + (state["z"] - self.point[2]) ** 2
+        )
 
+        orientation_error = abs(state["theta"] - self.point[3])
+
+        # Check if the waypoint is reached
+        if position_error < self.threshold:
+            return 0.0
+
+        return -(position_error + orientation_error)
 
 class WayPointReward:
     def __init__(self, waypoints, threshold=0.1):
