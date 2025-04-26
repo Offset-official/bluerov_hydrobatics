@@ -118,6 +118,7 @@ class BlueRov(gym.Env):
             tuple: (observation, info)
         """
         super().reset(seed=seed)
+        print("Reset called")
 
         self.state = self.init_state
 
@@ -130,6 +131,10 @@ class BlueRov(gym.Env):
             "z_offset": np.array([0], dtype=np.float32),
             "theta_offset": np.array([0], dtype=np.float32),
         }
+
+        if self.render_mode is not None:
+            print("I should go home")
+            self.step_sim()
 
         return obs, {}
 
@@ -178,7 +183,9 @@ class BlueRov(gym.Env):
         terminated = False
 
         # Check boundary conditions for termination
-        if abs(self.state["z"]) > 10.0:  # Depth limit
+        if self.state["z"] < -10.0:  # Depth limit
+            terminated = True
+        if self.state["z"] > 0.1:  # Depth limit
             terminated = True
         if (
             abs(self.state["x"]) > 15.0 or abs(self.state["y"]) > 15.0
