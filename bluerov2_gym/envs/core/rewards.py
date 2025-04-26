@@ -39,18 +39,19 @@ class WayPointReward:
         self.threshold = threshold
         self.total_waypoints = len(waypoints)
 
-    def get_reward(self, obs):
+    def get_reward(self, state):
         if self.current_waypoint_idx >= len(self.waypoints):
             return 0.0
 
+
         current_waypoint = self.waypoints[self.current_waypoint_idx]
         position_error = np.sqrt(
-            (obs["x"][0] - current_waypoint[0]) ** 2
-            + (obs["y"][0] - current_waypoint[1]) ** 2
-            + (obs["z"][0] - current_waypoint[2]) ** 2
+            (state["x"] - current_waypoint[0]) ** 2
+            + (state["y"] - current_waypoint[1]) ** 2
+            + (state["z"] - current_waypoint[2]) ** 2
         )
 
-        orientation_error = abs(obs["theta"][0] - current_waypoint[3])
+        orientation_error = abs(state["theta"] - current_waypoint[3])
 
         # Check if the waypoint is reached
         if position_error < self.threshold:

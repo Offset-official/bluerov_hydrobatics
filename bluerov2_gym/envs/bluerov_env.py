@@ -69,11 +69,7 @@ class BlueRov(gym.Env):
             "x": init_x,  # x position (m)
             "y": init_y,  # y position (m)
             "z": init_z,  # depth (m)
-            "x_offset": 0,  # offset (m)
-            "y_offset": 0,  # offset (m)
-            "z_offset": 0,  # offset (m)
             "theta": init_theta,  # heading angle (rad)
-            "theta_offset": 0,  # offset (m)
             "vx": 0,  # x velocity (m/s)
             "vy": 0,  # y velocity (m/s)
             "vz": 0,  # vertical velocity (m/s)
@@ -90,23 +86,15 @@ class BlueRov(gym.Env):
             dtype=np.float32,
         )
 
-        # Define observation space: Dictionary of all state variables
+        # the state space is only partially observable, we will only provide the offset to the current waypoint
         self.observation_space = spaces.Dict(
             {
-                "x": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "y": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "z": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
                 "x_offset": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
                 "y_offset": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
                 "z_offset": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "theta": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
                 "theta_offset": spaces.Box(
                     -np.inf, np.inf, shape=(1,), dtype=np.float32
                 ),
-                "vx": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "vy": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "vz": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "omega": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
             }
         )
 
@@ -136,7 +124,12 @@ class BlueRov(gym.Env):
         self.disturbance_dist = self.dynamics.reset()
 
         # Convert dictionary values to numpy arrays for the observation
-        obs = {k: np.array([v], dtype=np.float32) for k, v in self.state.items()}
+        obs = {
+            "x_offset": np.array([0], dtype=np.float32),
+            "y_offset": np.array([0], dtype=np.float32),
+            "z_offset": np.array([0], dtype=np.float32),
+            "theta_offset": np.array([0], dtype=np.float32),
+        }
 
         return obs, {}
 
@@ -154,7 +147,7 @@ class BlueRov(gym.Env):
         self.dynamics.step(self.state, action)
 
         # Format observation as required by Gymnasium
-        obs = {k: np.array([v], dtype=np.float32) for k, v in self.state.items()}
+        obs = {}
 
         if self.trajectory is not None:
             # Add offsets to the observation
@@ -179,7 +172,7 @@ class BlueRov(gym.Env):
             obs["theta_offset"] = np.array([0.0], dtype=np.float32)
 
         # Calculate reward based on current state
-        reward = self.reward_fn.get_reward(obs)
+        reward = self.reward_fn.get_reward(self.state)
 
         # Determine if episode should terminate
         terminated = False
