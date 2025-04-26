@@ -1,5 +1,7 @@
 from importlib import resources
 from pathlib import Path
+import time
+from copy import deepcopy
 
 import gymnasium as gym
 import numpy as np
@@ -76,11 +78,19 @@ class BlueRov(gym.Env):
             "omega": 0,  # angular velocity (rad/s)
         }
 
-        self.init_state = self.state
+        self.init_state = deepcopy(self.state)
+
+        print(
+            "Initial state for env: ",
+            self.init_state["x"],
+            self.init_state["y"],
+            self.init_state["z"],
+            self.init_state["theta"],
+        )
 
         # Define action space: 4 normalized thruster commands between -1.0 and 1.0
         self.action_space = spaces.Box(
-            low=-1.0,
+            low=np.array(-1.0),
             high=1.0,
             shape=(4,),
             dtype=np.float32,
@@ -118,9 +128,8 @@ class BlueRov(gym.Env):
             tuple: (observation, info)
         """
         super().reset(seed=seed)
-        print("Reset called")
 
-        self.state = self.init_state
+        self.state = deepcopy(self.init_state)
 
         self.disturbance_dist = self.dynamics.reset()
 
@@ -133,7 +142,6 @@ class BlueRov(gym.Env):
         }
 
         if self.render_mode is not None:
-            print("I should go home")
             self.step_sim()
 
         return obs, {}
@@ -225,6 +233,9 @@ class BlueRov(gym.Env):
         """
         Update the visualization with the current state.
         """
+        if self.state == self.init_state:
+            pass
+            # print("i was sent home")
         self.renderer.step_sim(self.state)
         if self.trajectory is not None:
             self.renderer.visualize_waypoints(
