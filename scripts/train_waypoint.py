@@ -2,40 +2,10 @@ import time
 from pathlib import Path
 
 import typer
-import gymnasium as gym
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import (
-    CheckpointCallback,
-)
-from stable_baselines3.common.utils import set_random_seed
-
+from stable_baselines3.common.callbacks import CheckpointCallback
 from bluerov2_gym.training.callbacks import WaypointTrainingCallback
-
-
-def make_env(trajectory_path, render_mode, rank, seed=0):
-    """
-    Utility function for multiprocessed env.
-
-    :param trajectory_path: Path to the trajectory CSV file
-    :param waypoint_threshold: Distance threshold for considering a waypoint reached
-    :param rank: Index of the subprocess
-    :param seed: The initial seed for RNG
-    """
-
-    def _init():
-        env = gym.make(
-            "BlueRov-v0",
-            trajectory_file=trajectory_path,
-            render_mode=render_mode,
-        )
-        env = Monitor(env)
-        env.reset(seed=seed + rank)
-        return env
-
-    set_random_seed(seed)
-    return _init
+from stable_baselines3.common.env_util import make_vec_env
 
 
 def train(
@@ -47,7 +17,6 @@ def train(
     batch_size: int = 64,
     n_epochs: int = 10,
     gamma: float = 0.99,
-    waypoint_threshold: float = 0.01,
     n_envs: int = 8,
     render_mode: str = "none",
 ):
@@ -79,15 +48,15 @@ def train(
     print(f"Model will be saved to: {model_path}")
     print(f"Using {n_envs} parallel environments")
 
-    # Create vectorized environment with multiple parallel envs
-    env = SubprocVecEnv(
-        [make_env(trajectory_path, render_mode, i) for i in range(n_envs)]
+    vec_env = make_vec_env(
+        "BlueRov-v0",
+        n_envs=n_envs,
+        env_kwargs={"trajectory_file": trajectory_path, "render_mode": render_mode},
     )
-    env = VecNormalize(env, norm_obs=True, norm_reward=True)
 
     model = PPO(
         "MultiInputPolicy",
-        env,
+        vec_env,
         verbose=1,
         learning_rate=learning_rate,
         n_steps=n_steps,
@@ -117,7 +86,6 @@ def train(
     print(f"Training completed in {training_time:.2f} seconds")
 
     model.save(model_path)
-    env.save(str(model_path) + "_vec_normalize.pkl")
     print(f"Model saved to {model_path}")
 
     return model
@@ -133,9 +101,6 @@ def train_command(
         "./trained_models", help="Directory to save trained models"
     ),
     timesteps: int = typer.Option(1000000, help="Total timesteps for training"),
-    threshold: float = typer.Option(
-        0.5, help="Distance threshold for considering a waypoint reached"
-    ),
     learning_rate: float = typer.Option(0.01, help="Learning rate for optimizer"),
     n_steps: int = typer.Option(
         2048, help="Number of steps to run for each environment per update"
@@ -156,7 +121,6 @@ def train_command(
         trajectory_path=trajectory,
         output_dir=output_dir,
         total_timesteps=timesteps,
-        waypoint_threshold=threshold,
         learning_rate=learning_rate,
         n_steps=n_steps,
         batch_size=batch_size,
