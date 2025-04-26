@@ -104,6 +104,8 @@ class BlueRov(gym.Env):
         self.render_mode = render_mode
         self.trajectory_file = trajectory_file
 
+        self.action_steps = 0
+
         if self.render_mode == "human":
             self.render()
 
@@ -132,6 +134,8 @@ class BlueRov(gym.Env):
             "theta_offset": np.array([0], dtype=np.float32),
         }
 
+        self.action_steps = 0
+
         if self.render_mode is not None:
             self.step_sim()
 
@@ -152,6 +156,9 @@ class BlueRov(gym.Env):
 
         # Format observation as required by Gymnasium
         obs = {}
+
+        self.action_steps += 1
+        print("action_steps: ", self.action_steps)
 
         # Add offsets to the observation
         waypoint = self.target_point
