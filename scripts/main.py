@@ -262,6 +262,10 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
         # Load the appropriate model based on algorithm
         if algorithm == "ppo":
             model = PPO.load(model_path)
+        elif algorithm == "a2c":
+            model = A2C.load(model_path)
+        elif algorithm == "sac":
+            model = SAC.load(model_path)
         else:
             print(f"Unknown algorithm: {algorithm}. Using PPO as default.")
             model = PPO.load(model_path)
@@ -297,24 +301,9 @@ def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100
         while step_count < max_steps:
             if model:
                 if use_normalization:
-                    if isinstance(obs, dict):
-                        obs_array = np.concatenate(
-                            [obs[key] for key in sorted(obs.keys())]
-                        )
-                    else:
-                        obs_array = obs
-
-                    obs_normalized = vec_env.normalize_obs(obs_array)
-                    action, _ = model.predict(obs_normalized, deterministic=True)
+                    action, _ = model.predict(obs, deterministic=True)
                 else:
-                    if isinstance(obs, dict):
-                        obs_array = np.concatenate(
-                            [obs[key] for key in sorted(obs.keys())]
-                        )
-                    else:
-                        obs_array = obs
-
-                    action, _ = model.predict(obs_array, deterministic=True)
+                    action, _ = model.predict(obs, deterministic=True)
             else:
                 # Random action if no model is loaded
                 action = np.random.uniform(-1, 1, 4)
@@ -418,9 +407,9 @@ def main():
     parser.add_argument(
         "--algorithm",
         type=str,
-        choices=["pid", "ppo", "manual"],
+        choices=["pid", "ppo", "sac", "a2c", "manual"],
         default="pid",
-        help="Control algorithm to use (pid, ppo, sac, td3, a2c, or manual)",
+        help="Control algorithm to use (pid, ppo, sac, a2c, or manual)",
     )
 
     parser.add_argument(

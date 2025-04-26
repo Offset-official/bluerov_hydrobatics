@@ -3,7 +3,7 @@ from pathlib import Path
 
 import typer
 import gymnasium as gym
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, A2C, SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import (
@@ -50,9 +50,10 @@ def train(
     waypoint_threshold: float = 0.01,
     n_envs: int = 8,
     render_mode: str = "none",
+    algorithm: str = "ppo",
 ):
     """
-    Train an agent to follow a trajectory using PPO with parallel environments
+    Train an agent to follow a trajectory using PPO, A2C, or SAC with parallel environments
 
     Args:
         trajectory_path: Path to CSV file with trajectory waypoints
@@ -65,6 +66,7 @@ def train(
         gamma: Discount factor
         waypoint_threshold: Distance threshold for considering a waypoint reached
         n_envs: Number of parallel environments
+        algorithm: RL algorithm to use ("ppo", "a2c", or "sac")
     """
 
     output_dir = Path(output_dir)
@@ -72,12 +74,13 @@ def train(
 
     trajectory_name = Path(trajectory_path).stem
 
-    model_name = f"bluerov_waypoint_{trajectory_name}"
+    model_name = f"bluerov_waypoint_{trajectory_name}_{algorithm}"
     model_path = output_dir / model_name
 
     print(f"Training on trajectory: {trajectory_path}")
     print(f"Model will be saved to: {model_path}")
     print(f"Using {n_envs} parallel environments")
+    print(f"Algorithm: {algorithm.upper()}")
 
     # Create vectorized environment with multiple parallel envs
     env = SubprocVecEnv(
@@ -85,17 +88,32 @@ def train(
     )
     env = VecNormalize(env, norm_obs=True, norm_reward=True)
 
-    model = PPO(
-        "MultiInputPolicy",
-        env,
+    algo_map = {
+        "ppo": PPO,
+        "a2c": A2C,
+        "sac": SAC,
+    }
+    algo = algorithm.lower()
+    if algo not in algo_map:
+        raise ValueError(f"Unsupported algorithm: {algorithm}. Choose from 'ppo', 'a2c', 'sac'.")
+
+    # SAC does not use n_epochs, so we filter params accordingly
+    model_kwargs = dict(
+        policy="MultiInputPolicy",
+        env=env,
         verbose=1,
         learning_rate=learning_rate,
-        n_steps=n_steps,
-        batch_size=batch_size,
-        n_epochs=n_epochs,
         gamma=gamma,
         tensorboard_log=str(output_dir / "tensorboard"),
     )
+    if algo in ["ppo", "a2c"]:
+        model_kwargs["n_steps"] = n_steps
+    if algo in ["ppo", "sac"]:
+        model_kwargs["batch_size"] = batch_size
+    if algo == "ppo":
+        model_kwargs["n_epochs"] = n_epochs
+
+    model = algo_map[algo](**model_kwargs)
 
     checkpoint_callback = CheckpointCallback(
         save_freq=10000,
@@ -150,10 +168,13 @@ def train_command(
         None,
         help="Render mode for the environment (default: 'none')",
     ),
+    algorithm: str = typer.Option(
+        "ppo", help="RL algorithm to use: 'ppo', 'a2c', or 'sac'"
+    ),
 ):
     """Train a new model for BlueRov2 trajectory following"""
     train(
-        trajectory_path=trajectory,
+        trajectory_path="trajectories/spiral.csv",
         output_dir=output_dir,
         total_timesteps=timesteps,
         waypoint_threshold=threshold,
@@ -164,6 +185,7 @@ def train_command(
         gamma=gamma,
         n_envs=n_envs,
         render_mode=render_mode,
+        algorithm=algorithm,
     )
 
 
