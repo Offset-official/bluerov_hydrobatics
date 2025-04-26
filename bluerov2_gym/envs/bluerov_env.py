@@ -8,7 +8,7 @@ import numpy as np
 from gymnasium import spaces
 
 from bluerov2_gym.envs.core.dynamics import Dynamics
-from bluerov2_gym.envs.core.rewards import Reward, WayPointReward
+from bluerov2_gym.envs.core.rewards import Reward, WayPointReward, PointReward
 from bluerov2_gym.envs.core.visualization.renderer import BlueRovRenderer
 
 
@@ -45,24 +45,15 @@ class BlueRov(gym.Env):
             self.renderer = BlueRovRenderer()
             self.render_mode = render_mode
 
-        if trajectory_file is not None:
-            self.trajectory = np.loadtxt(trajectory_file, delimiter=",")
-            print(f"Loaded trajectory with {self.trajectory.shape[0]} waypoints")
-            init_x = self.trajectory[0, 0]
-            init_y = self.trajectory[0, 1]
-            init_z = self.trajectory[0, 2]
-            init_theta = self.trajectory[0, 3]
-        else:
-            init_x = 0
-            init_y = 0
-            init_z = 0
-            init_theta = 0
-            self.trajectory = None
+        self.target_point = [0.0, -1.0, -5.0, 0.0]  # x, y, z, theta
+        
+        init_x = 0
+        init_y = 0
+        init_z = -5.0
+        init_theta = 0
+        self.start_point = [init_x, init_y, init_z, init_theta]
 
-        if self.trajectory is not None:
-            self.reward_fn = WayPointReward(self.trajectory)
-        else:
-            self.reward_fn = Reward()
+        self.reward_fn = PointReward(self.target_point,threshold=0.01)
 
         self.dynamics = Dynamics()
 
@@ -90,7 +81,7 @@ class BlueRov(gym.Env):
 
         # Define action space: 4 normalized thruster commands between -1.0 and 1.0
         self.action_space = spaces.Box(
-            low=np.array(-1.0),
+            low=-1.0,
             high=1.0,
             shape=(4,),
             dtype=np.float32,
@@ -162,27 +153,20 @@ class BlueRov(gym.Env):
         # Format observation as required by Gymnasium
         obs = {}
 
-        if self.trajectory is not None:
-            # Add offsets to the observation
-            current_waypoint_idx = self.reward_fn.current_waypoint_idx
-            waypoint = self.trajectory[current_waypoint_idx]
-            obs["x_offset"] = np.array(
-                [waypoint[0] - self.state["x"]], dtype=np.float32
-            )
-            obs["y_offset"] = np.array(
-                [waypoint[1] - self.state["y"]], dtype=np.float32
-            )
-            obs["z_offset"] = np.array(
-                [waypoint[2] - self.state["z"]], dtype=np.float32
-            )
-            obs["theta_offset"] = np.array(
-                [waypoint[3] - self.state["theta"]], dtype=np.float32
-            )
-        else:
-            obs["x_offset"] = np.array([0.0], dtype=np.float32)
-            obs["y_offset"] = np.array([0.0], dtype=np.float32)
-            obs["z_offset"] = np.array([0.0], dtype=np.float32)
-            obs["theta_offset"] = np.array([0.0], dtype=np.float32)
+        # Add offsets to the observation
+        waypoint = self.target_point
+        obs["x_offset"] = np.array(
+            [waypoint[0] - self.state["x"]], dtype=np.float32
+        )
+        obs["y_offset"] = np.array(
+            [waypoint[1] - self.state["y"]], dtype=np.float32
+        )
+        obs["z_offset"] = np.array(
+            [waypoint[2] - self.state["z"]], dtype=np.float32
+        )
+        obs["theta_offset"] = np.array(
+            [waypoint[3] - self.state["theta"]], dtype=np.float32
+        )
 
         # Calculate reward based on current state
         reward = self.reward_fn.get_reward(self.state)
@@ -201,15 +185,8 @@ class BlueRov(gym.Env):
             terminated = True
 
         truncated = False  # Episode is not truncated
-        if self.trajectory is not None:
-            waypoint_progress = (
-                self.reward_fn.current_waypoint_idx / self.reward_fn.total_waypoints
-            )
 
         info = {
-            "waypoint_progress": (
-                waypoint_progress if self.trajectory is not None else 0.0
-            )
         }
 
         if self.render_mode == "human":
@@ -223,11 +200,10 @@ class BlueRov(gym.Env):
         """
         self.renderer.render(self.model_path, self.init_state)
 
-        if self.trajectory is not None:
-            self.renderer.visualize_waypoints(
-                self.trajectory[:, :3],
-                current_idx=self.reward_fn.current_waypoint_idx,
-            )
+        self.renderer.visualize_waypoints(
+            [self.start_point[:3],self.target_point[:3]],
+            current_idx=1,
+        )
 
     def step_sim(self):
         """
@@ -237,8 +213,7 @@ class BlueRov(gym.Env):
             pass
             # print("i was sent home")
         self.renderer.step_sim(self.state)
-        if self.trajectory is not None:
-            self.renderer.visualize_waypoints(
-                self.trajectory[:, :3],
-                current_idx=self.reward_fn.current_waypoint_idx,
-            )
+        self.renderer.visualize_waypoints(
+            [self.start_point[:3],self.target_point[:3]],
+            current_idx=1,
+        )
