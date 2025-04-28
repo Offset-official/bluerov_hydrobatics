@@ -23,6 +23,7 @@ def train(
     n_envs: int = 8,
     model_name: str = "bluerov_simplepoint",
     render_mode: str = None,
+    model_type: str = "ppo",  # new argument
 ):
 
     env = bluerov2_gym.envs.BlueRov(render_mode=None)
@@ -33,6 +34,8 @@ def train(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Update model_name to include model_type for clarity
+    model_name = f"{model_type.lower()}_{model_name}"
     model_path = output_dir / model_name
     best_path = output_dir / "best" / model_name
 

@@ -64,4 +64,7 @@ python ./scripts/main.py --algorithm pid --file ./trajectories/spiral.csv --max-
 
 # Run manual control
 python ./scripts/main.py --algorithm manual
+
+
+python scripts/train_simple_point.py --model-type sac --total-timesteps 500000 --n-envs 4 --model-name mymodel
 ```
