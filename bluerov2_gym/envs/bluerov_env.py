@@ -25,7 +25,7 @@ class BlueRov(gym.Env):
 
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
-    def __init__(self, render_mode=None, trajectory_file=None):
+    def __init__(self, render_mode=None):
         """
         Initialize the BlueROV environment
 
@@ -44,19 +44,19 @@ class BlueRov(gym.Env):
         self.dynamics = Dynamics()
 
         self.state = {
-            "x": 0,  # x position (m)
-            "y": 0,  # y position (m)
-            "z": 0,  # depth (m)
-            "theta": 0,  # heading angle (rad)
-            "vx": 0,  # x velocity (m/s)
-            "vy": 0,  # y velocity (m/s)
-            "vz": 0,  # vertical velocity (m/s)
-            "omega": 0,  # angular velocity (rad/s)
+            "x": 0.0,  # x position (m)
+            "y": 0.0,  # y position (m)
+            "z": 0.0,  # depth (m)
+            "theta": 0.0,  # heading angle (rad)
+            "vx": 0.0,  # x velocity (m/s)
+            "vy": 0.0,  # y velocity (m/s)
+            "vz": 0.0,  # vertical velocity (m/s)
+            "omega": 0.0,  # angular velocity (rad/s)
         }
 
         self.init_state = deepcopy(self.state)
 
-        self.goal_point = [0, -1, 0, 0]  # x,y,z,theta (yaw)
+        self.goal_point = np.array([0, -1, 0, 0], dtype=np.float64)  # x,y,z,theta (yaw)
 
         self.threshold_distance = 0.1
 
@@ -72,16 +72,16 @@ class BlueRov(gym.Env):
 
         self.observation_space = spaces.Dict(
             {
-                "offset_x": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "offset_y": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "offset_z": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
+                "offset_x": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
+                "offset_y": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
+                "offset_z": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "offset_theta": spaces.Box(
-                    -np.inf, np.inf, shape=(1,), dtype=np.float32
+                    -np.inf, np.inf, shape=(1,), dtype=np.float64
                 ),
-                "vx": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "vy": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "vz": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "omega": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
+                "vx": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
+                "vy": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
+                "vz": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
+                "omega": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
             }
         )
 
