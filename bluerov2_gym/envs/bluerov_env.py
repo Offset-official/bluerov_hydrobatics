@@ -4,7 +4,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 from bluerov2_gym.envs.core.dynamics import Dynamics
-from bluerov2_gym.envs.core.rewards import Reward, WayPointReward
+from bluerov2_gym.envs.core.rewards import Reward, SinglePointReward
 from bluerov2_gym.envs.core.visualization.renderer import BlueRovRenderer
 
 
@@ -41,7 +41,6 @@ class BlueRov(gym.Env):
             self.renderer = BlueRovRenderer()
             self.render_mode = render_mode
 
-        self.reward_fn = Reward()
         self.dynamics = Dynamics()
 
         self.state = {
@@ -58,6 +57,10 @@ class BlueRov(gym.Env):
         self.init_state = deepcopy(self.state)
 
         self.goal_point = [0, -1, 0, 0]  # x,y,z,theta (yaw)
+
+        self.threshold_distance = 0.1
+
+        self.reward_fn = SinglePointReward(threshold=self.threshold_distance)
 
         # 4 normalized thruster commands between -1.0 and 1.0
         self.action_space = spaces.Box(
@@ -128,8 +131,6 @@ class BlueRov(gym.Env):
 
         obs = self.compute_observation()
 
-        reward = self.reward_fn.get_reward(obs)
-
         # Reset conditions
         terminated = False
         truncated = False
@@ -142,8 +143,14 @@ class BlueRov(gym.Env):
         ):  # Horizontal boundaries
             terminated = True
 
+        distance_from_goal = self.compute_distance_from_goal()
+        if distance_from_goal < self.threshold_distance:
+            terminated = True  # need to check if the model actually recieves this value
+
+        reward = self.reward_fn.get_reward(distance_from_goal, obs["offset_theta"][0])
+
         info = {
-            "distance_from_goal": self.compute_distance_from_goal(),
+            "distance_from_goal": distance_from_goal,
             "reward": reward,
         }
 
@@ -157,23 +164,20 @@ class BlueRov(gym.Env):
         Render the environment if in human mode.
         """
         self.renderer.render(self.model_path, self.init_state)
-
-        if self.trajectory is not None:
-            self.renderer.visualize_waypoints(
-                self.trajectory[:, :3],
-                current_idx=self.reward_fn.current_waypoint_idx,
-            )
+        self.renderer.visualize_waypoints(
+            self.trajectory[:, :3],
+            current_idx=self.reward_fn.current_waypoint_idx,
+        )
 
     def step_sim(self):
         """
         Update the visualization with the current state.
         """
         self.renderer.step_sim(self.state)
-        if self.trajectory is not None:
-            self.renderer.visualize_waypoints(
-                [[0, 0, 0], self.goal_point[:3]],
-                current_idx=1,
-            )
+        self.renderer.visualize_waypoints(
+            [[0, 0, 0], self.goal_point[:3]],
+            current_idx=1,
+        )
 
     def compute_observation(self):
 
