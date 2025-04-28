@@ -128,9 +128,11 @@ class BlueRov(gym.Env):
         Returns:
             tuple: (observation, reward, terminated, truncated, info)
         """
-        self.dynamics.step(self.state, action)
+        self.dynamics.step(self.state, action) 
 
         obs = self.compute_observation()
+
+        # print(obs)
 
         # Reset conditions
         terminated = False
