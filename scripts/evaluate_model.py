@@ -6,6 +6,8 @@ import gymnasium as gym
 import bluerov2_gym  # ensure custom env is registered
 from stable_baselines3 import PPO
 from stable_baselines3 import SAC
+from stable_baselines3 import A2C
+from stable_baselines3.common.vec_env import DummyVecEnv
 import matplotlib.pyplot as plt
 # import vecnormalize
 from stable_baselines3.common.vec_env import VecNormalize
@@ -23,6 +25,8 @@ def evaluate(model_path: str, num_episodes: int, model_type: str, normalization_
         model = PPO.load(model_path)
     elif model_type.lower() == "sac":
         model = SAC.load(model_path)
+    elif model_type.lower() == "a2c":
+        model = A2C.load(model_path)
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
     model.set_env(env)
@@ -131,7 +135,7 @@ if __name__ == "__main__":
         help="Number of episodes to run for evaluation",
     )
     parser.add_argument(
-        "--normalization_file",
+        "--normalization-file",
         type=str,
         help="Path to the normalization file (optional)",
     )
@@ -139,7 +143,7 @@ if __name__ == "__main__":
         "--model-type",
         type=str,
         default="ppo",
-        choices=["ppo", "sac"],
+        choices=["ppo", "sac", "a2c"],
         help="Type of RL model to evaluate (ppo or sac)",
     )
     args = parser.parse_args()
