@@ -7,7 +7,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.env_checker import check_env
-from stable_baselines3.common.vec_env import VecNormalize,SubprocVecEnv
+from stable_baselines3.common.vec_env import VecNormalize, SubprocVecEnv
 import rich
 
 import bluerov2_gym.envs
@@ -48,13 +48,15 @@ def train(
         render=False,
     )
 
-    vec_env = VecNormalize(make_vec_env(
-        "BlueRov-v0",
-        n_envs=n_envs,
-        seed=42,
-        env_kwargs={"render_mode": render_mode},
-        #vec_env_cls=SubprocVecEnv,
-    ))
+    vec_env = VecNormalize(
+        make_vec_env(
+            "BlueRov-v0",
+            n_envs=n_envs,
+            seed=42,
+            env_kwargs={"render_mode": render_mode},
+            # vec_env_cls=SubprocVecEnv,
+        )
+    )
 
     env = bluerov2_gym.envs.BlueRov(render_mode=None)
 
@@ -62,7 +64,14 @@ def train(
 
     print("Environment check passed successfully ✅")
 
-    model = PPO("MultiInputPolicy", vec_env, verbose=1, n_steps=n_steps, batch_size=5,device="cpu")
+    model = PPO(
+        "MultiInputPolicy",
+        vec_env,
+        verbose=1,
+        n_steps=n_steps,
+        batch_size=5,
+        device="cpu",
+    )
 
     start_time = time.time()
 
