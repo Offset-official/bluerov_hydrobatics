@@ -43,7 +43,7 @@ class SinglePointReward:
         r_pos = 0.2 * np.exp(-(distance_to_goal**2))
         r_angle = 0.5 * np.exp(-(theta_offset))
 
-        return r_pos + r_angle
+        return r_pos 
 
 
 class WayPointReward:
