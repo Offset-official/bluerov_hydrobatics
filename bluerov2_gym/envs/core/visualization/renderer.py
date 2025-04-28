@@ -4,6 +4,7 @@ import meshcat.transformations as tf
 import numpy as np
 import bluerov2_gym
 import time
+import os
 
 
 class BlueRovRenderer:
@@ -31,10 +32,19 @@ class BlueRovRenderer:
         water_volume_transform = tf.translation_matrix([0, 0, -5])
         self.vis["water_volume"].set_object(water_volume, water_volume_material)
         self.vis["water_volume"].set_transform(water_volume_transform)
-        # print("model_path: ", model_path)
         self.vis["vessel"].set_object(
             g.DaeMeshGeometry.from_file(model_path),
-            g.MeshLambertMaterial(color=0x0000FF, wireframe=False),
+            g.MeshLambertMaterial(
+                map=g.ImageTexture(
+                    image=g.PngImage.from_file(
+                        os.path.join(
+                            bluerov2_gym.__path__[0],
+                            "assets",
+                            "texture.png",
+                        )
+                    )
+                )
+            ),
         )
         # cheeky fix to position the model correctly
         self.step_sim(init_state)

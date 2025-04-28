@@ -75,7 +75,13 @@ class TrajectoryVisualizer:
         # BlueROV2 model
         self.vis["vessel"].set_object(
             g.DaeMeshGeometry.from_file(model_path),
-            g.MeshLambertMaterial(color=0x0000FF, wireframe=False),
+            g.MeshLambertMaterial(
+                map=g.ImageTexture(
+                    image=g.PngImage.from_file(
+                        "C:/Users/abhin/Downloads/Untitled.png",
+                    )
+                )
+            ),
         )
 
         # Ground/seafloor
