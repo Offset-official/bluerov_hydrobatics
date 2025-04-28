@@ -14,7 +14,7 @@ app = typer.Typer()
 def train(
     output_dir: str = "./trained_models",
     total_timesteps: int = 1000000,
-    n_steps: int = 2048,
+    n_steps: int = 5,
     n_envs: int = 8,
     model_name: str = "bluerov_simplepoint",
 ):
@@ -38,7 +38,7 @@ def train(
         seed=42,
     )
 
-    model = PPO("MultiInputPolicy", vec_env, verbose=1, n_steps=10)
+    model = PPO("MultiInputPolicy", vec_env, verbose=1, n_steps=n_steps)
 
     start_time = time.time()
 
