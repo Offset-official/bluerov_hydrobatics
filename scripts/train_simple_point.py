@@ -4,7 +4,7 @@ import gymnasium as gym
 import bluerov2_gym
 import typer
 from stable_baselines3 import PPO, A2C
-from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback, BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.vec_env import VecNormalize, SubprocVecEnv, DummyVecEnv
@@ -21,9 +21,8 @@ def train(
     total_timesteps: int = 1000000,
     n_steps: int = 8,
     n_envs: int = 8,
-    model_name: str = "bluerov_simplepoint",
     render_mode: str = None,
-    model_type: str = "ppo",  # new argument
+    best_save_folder = "best_checkpoints",
 ):
 
     env = bluerov2_gym.envs.BlueRov(render_mode=None)
@@ -35,11 +34,11 @@ def train(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Update model_name to include model_type for clarity
-    model_name = f"{model_type.lower()}_{model_name}"
-    model_path = output_dir / model_name
-    best_path = output_dir / "best" / model_name
+    # model_name = f"{model_type.lower()}_{model_name}"
+    # model_path = output_dir / model_name
+    best_path = output_dir / best_save_folder
 
-    print(f"Model will be saved to: {model_path}")
+    print(f"Model will be saved to: ", best_path)
     print(f"Using {n_envs} parallel environments")
 
 
@@ -63,6 +62,7 @@ def train(
             n_eval_episodes: int = 20,
             deterministic: bool = True,
             verbose: int = 1,
+            callback_on_new_best: BaseCallback | None = None,
         ):
 
             frozen_eval = VecNormalize(
@@ -70,7 +70,7 @@ def train(
                     "BlueRov-v0",
                     n_envs=1,
                     seed=42,
-                    env_kwargs={"render_mode": "human"},
+                    env_kwargs={"render_mode": None},
                     vec_env_cls=DummyVecEnv,
                 )
                 , training=False, norm_reward=False)
@@ -86,7 +86,40 @@ def train(
                 n_eval_episodes=n_eval_episodes,
                 deterministic=deterministic,
                 verbose=verbose,
+                callback_on_new_best=callback_on_new_best,
             )
+
+    class SaveVecNormalizeCallback(BaseCallback):
+        def __init__(
+            self,
+            vecnormalize_env: VecNormalize,
+            save_path: str | Path,
+            verbose: int = 0,
+        ):
+            super().__init__(verbose)
+            if not isinstance(vecnormalize_env, VecNormalize):
+                raise TypeError(
+                    "SaveVecNormalizeCallback expects a `VecNormalize` env, "
+                    f"got {type(vecnormalize_env)}"
+                )
+
+            self.vecnormalize_env = vecnormalize_env
+            self.save_path = Path(save_path)
+            self.save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        def _on_step(self) -> bool:
+            self.vecnormalize_env.save(self.save_path)
+            if self.verbose > 0:
+                print(f"[SaveVecNormalizeCallback] VecNormalize stats saved → {self.save_path}")
+            return True
+
+    new_best_eval_callback = SaveVecNormalizeCallback(
+        vecnormalize_env=train_env,           # your *training* VecNormalize wrapper
+        save_path=best_path / "vecnormalize.pkl",
+        verbose=1,
+    )
+
+
 
     eval_callback = FrozenEvalCallback(
         train_env,
@@ -96,6 +129,7 @@ def train(
         n_eval_episodes=20,
         deterministic=True,
         verbose=1,
+        callback_on_new_best=new_best_eval_callback
     )
 
 
@@ -135,6 +169,9 @@ def train(
     # # load best model 
     # model = A2C.load(str(best_path))
     # vec_norm = model.get_vec_normalize()
+
+    del model 
+
 
 
     return model

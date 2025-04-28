@@ -7,18 +7,25 @@ import bluerov2_gym  # ensure custom env is registered
 from stable_baselines3 import PPO
 from stable_baselines3 import SAC
 import matplotlib.pyplot as plt
+# import vecnormalize
+from stable_baselines3.common.vec_env import VecNormalize
 
 
-def evaluate(model_path: str, num_episodes: int, model_type: str):
+def evaluate(model_path: str, num_episodes: int, model_type: str, normalization_file: str = None):
     # Create a single env with MeshCat rendering enabled
-    env = gym.make("BlueRov-v0", render_mode="human")
+    env0 = DummyVecEnv(
+        [lambda: gym.make("BlueRov-v0", render_mode="human", trajectory_file=None)]
+    )
+    env = VecNormalize.load(normalization_file, env0)
+    env.training = False
+
     if model_type.lower() == "ppo":
         model = PPO.load(model_path)
     elif model_type.lower() == "sac":
         model = SAC.load(model_path)
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
-
+    model.set_env(env)
     episode_rewards = []
     success_count = 0
 
@@ -124,6 +131,11 @@ if __name__ == "__main__":
         help="Number of episodes to run for evaluation",
     )
     parser.add_argument(
+        "--normalization_file",
+        type=str,
+        help="Path to the normalization file (optional)",
+    )
+    parser.add_argument(
         "--model-type",
         type=str,
         default="ppo",
@@ -132,4 +144,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    evaluate(args.model_path, args.num_episodes, args.model_type)
+    evaluate(args.model_path, args.num_episodes, args.model_type, args.normalization_file)
