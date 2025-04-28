@@ -174,7 +174,7 @@ class BlueRov(gym.Env):
         is_success = bool(distance_from_goal < self.threshold_distance)
         terminated = bool(terminated or is_success)
 
-        if is_success and self.using_trajectory:
+        if is_success and self.trajectory is not None:
             self.waypoint_idx += 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
 

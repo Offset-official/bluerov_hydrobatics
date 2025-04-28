@@ -19,7 +19,7 @@ app = typer.Typer(pretty_exceptions_enable=False)
 def train(
     output_dir: str = "./trained_models",
     total_timesteps: int = 1000000,
-    n_steps: int = 16,
+    n_steps: int = 8,
     n_envs: int = 8,
     model_name: str = "bluerov_simplepoint",
     render_mode: str = None,
@@ -44,7 +44,7 @@ def train(
             "BlueRov-v0",
             n_envs=1,
             seed=42,
-            env_kwargs={"render_mode": "human"},
+            env_kwargs={"render_mode": "none"},
         )
     )
 
@@ -79,7 +79,7 @@ def train(
         vec_env,
         verbose=0,
         n_steps=n_steps,
-        batch_size=128,
+        batch_size=64,
         device="cpu",
         tensorboard_log=str("logs"),
     )
