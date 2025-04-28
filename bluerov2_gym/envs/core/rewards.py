@@ -28,6 +28,24 @@ class Reward:
         return reward
 
 
+class SinglePointReward:
+    def __init__(self, threshold=0.1):
+        """
+        Initialize the SinglePointReward class.
+        goal_point: numpy array of shape (4,) containing x, y, z coordinates and heading angle (rad)
+        """
+        self.threshold = threshold
+
+    def get_reward(self, distance_to_goal, theta_offset):
+        if distance_to_goal < self.threshold:
+            distance_to_goal = 0.0
+
+        r_pos = 0.2 * np.exp(-(distance_to_goal**2))
+        r_angle = 0.5 * np.exp(-(theta_offset))
+
+        return r_pos + r_angle
+
+
 class WayPointReward:
     def __init__(self, waypoints, threshold=0.1):
         """
