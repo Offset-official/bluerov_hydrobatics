@@ -149,7 +149,7 @@ def train(
         verbose=0,
         n_steps=n_steps,
         # batch_size=64,
-        device="cuda",
+        device="cpu",
         tensorboard_log=str("logs"),
     )
 
