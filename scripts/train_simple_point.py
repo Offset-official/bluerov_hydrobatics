@@ -43,9 +43,9 @@ def train(
         eval_env,
         best_model_save_path="./logs/",
         log_path="./logs/",
-        eval_freq=500,
+        eval_freq=10000,
         deterministic=True,
-        render=False,
+        render=True,
     )
 
     vec_env = VecNormalize(
@@ -54,7 +54,7 @@ def train(
             n_envs=n_envs,
             seed=42,
             env_kwargs={"render_mode": render_mode},
-            # vec_env_cls=SubprocVecEnv,
+            vec_env_cls=SubprocVecEnv,
         )
     )
 
@@ -77,7 +77,7 @@ def train(
 
     model.learn(
         total_timesteps=total_timesteps,
-        callback=[checkpoint_callback],
+        callback=[checkpoint_callback, eval_callback],
         progress_bar=True,
     )
 
