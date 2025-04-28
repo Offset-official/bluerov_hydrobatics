@@ -145,15 +145,17 @@ class BlueRov(gym.Env):
             terminated = True
 
         distance_from_goal = self.compute_distance_from_goal()
+        action_magnitude = self.compute_action_magnitude(action)
 
         is_success = bool(distance_from_goal < self.threshold_distance)
         terminated = bool(terminated or is_success)
 
-        reward = self.reward_fn.get_reward(distance_from_goal, obs["offset_theta"][0])
+        reward = self.reward_fn.get_reward(distance_from_goal, obs["offset_theta"][0], action_magnitude)
 
         info = {
             "distance_from_goal": distance_from_goal,
             "reward": reward,
+            "action_magnitude": action_magnitude,
             "is_success": is_success,
         }
 
@@ -208,6 +210,9 @@ class BlueRov(gym.Env):
                 ]
             )
         )
+    
+    def compute_action_magnitude(self, action):
+        return np.linalg.norm(action)
 
     def compute_random_goal_point(self):
         """
