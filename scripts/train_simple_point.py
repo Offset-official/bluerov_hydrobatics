@@ -76,7 +76,7 @@ def train(
     model = PPO(
         "MultiInputPolicy",
         vec_env,
-        verbose=1,
+        verbose=0,
         n_steps=n_steps,
         batch_size=5,
         device="cpu",
