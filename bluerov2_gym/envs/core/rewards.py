@@ -43,8 +43,8 @@ class SinglePointReward:
             r_completion = 100
 
         r_pos = -np.exp((distance_to_goal**2))
-        r_angle = -0.1 * np.exp((theta_offset**2))
-        r_action = -0.05 * np.exp((action_magnitude))
+        r_angle = -0.5 * np.exp((theta_offset**2))
+        r_action = -0.2 * np.exp((action_magnitude))
 
         return np.array([r_pos, r_angle, r_action, r_completion])
 
