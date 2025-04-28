@@ -143,14 +143,16 @@ class BlueRov(gym.Env):
             terminated = True
 
         distance_from_goal = self.compute_distance_from_goal()
-        if distance_from_goal < self.threshold_distance:
-            terminated = True  # need to check if the model actually recieves this value
+
+        is_success = bool(distance_from_goal < self.threshold_distance)
+        terminated = bool(terminated or is_success)
 
         reward = self.reward_fn.get_reward(distance_from_goal, obs["offset_theta"][0])
 
         info = {
             "distance_from_goal": distance_from_goal,
             "reward": reward,
+            "is_success": is_success,
         }
 
         if self.render_mode == "human":
