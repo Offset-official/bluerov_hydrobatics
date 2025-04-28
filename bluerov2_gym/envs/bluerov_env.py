@@ -1,10 +1,8 @@
 from importlib import resources
-from pathlib import Path
-
+from copy import deepcopy
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
-
 from bluerov2_gym.envs.core.dynamics import Dynamics
 from bluerov2_gym.envs.core.rewards import Reward, WayPointReward
 from bluerov2_gym.envs.core.visualization.renderer import BlueRovRenderer
@@ -43,46 +41,25 @@ class BlueRov(gym.Env):
             self.renderer = BlueRovRenderer()
             self.render_mode = render_mode
 
-        if trajectory_file is not None:
-            self.trajectory = np.loadtxt(trajectory_file, delimiter=",")
-            print(f"Loaded trajectory with {self.trajectory.shape[0]} waypoints")
-            init_x = self.trajectory[0, 0]
-            init_y = self.trajectory[0, 1]
-            init_z = self.trajectory[0, 2]
-            init_theta = self.trajectory[0, 3]
-        else:
-            init_x = 0
-            init_y = 0
-            init_z = 0
-            init_theta = 0
-            self.trajectory = None
-
-        if self.trajectory is not None:
-            self.reward_fn = WayPointReward(self.trajectory)
-        else:
-            self.reward_fn = Reward()
-
+        self.reward_fn = Reward()
         self.dynamics = Dynamics()
 
-        # Initialize state variables
         self.state = {
-            "x": init_x,  # x position (m)
-            "y": init_y,  # y position (m)
-            "z": init_z,  # depth (m)
-            "x_offset": 0,  # offset (m)
-            "y_offset": 0,  # offset (m)
-            "z_offset": 0,  # offset (m)
-            "theta": init_theta,  # heading angle (rad)
-            "theta_offset": 0,  # offset (m)
+            "x": 0,  # x position (m)
+            "y": 0,  # y position (m)
+            "z": 0,  # depth (m)
+            "theta": 0,  # heading angle (rad)
             "vx": 0,  # x velocity (m/s)
             "vy": 0,  # y velocity (m/s)
             "vz": 0,  # vertical velocity (m/s)
             "omega": 0,  # angular velocity (rad/s)
         }
 
-        self.init_state = self.state
+        self.init_state = deepcopy(self.state)
 
-        # Define action space: 4 normalized thruster commands between -1.0 and 1.0
+        self.goal_point = [0, -1, 0, 0]  # x,y,z,theta (yaw)
+
+        # 4 normalized thruster commands between -1.0 and 1.0
         self.action_space = spaces.Box(
             low=-1.0,
             high=1.0,
@@ -90,17 +67,12 @@ class BlueRov(gym.Env):
             dtype=np.float32,
         )
 
-        # Define observation space: Dictionary of all state variables
         self.observation_space = spaces.Dict(
             {
-                "x": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "y": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "z": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "x_offset": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "y_offset": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "z_offset": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "theta": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
-                "theta_offset": spaces.Box(
+                "offset_x": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
+                "offset_y": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
+                "offset_z": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
+                "offset_theta": spaces.Box(
                     -np.inf, np.inf, shape=(1,), dtype=np.float32
                 ),
                 "vx": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float32),
@@ -110,7 +82,6 @@ class BlueRov(gym.Env):
             }
         )
 
-        # Simulation parameters
         self.dt = 0.1  # Time step (seconds)
         self.render_mode = render_mode
         self.trajectory_file = trajectory_file
@@ -131,14 +102,17 @@ class BlueRov(gym.Env):
         """
         super().reset(seed=seed)
 
-        self.state = self.init_state
+        self.state = deepcopy(self.init_state)
 
         self.disturbance_dist = self.dynamics.reset()
 
-        # Convert dictionary values to numpy arrays for the observation
-        obs = {k: np.array([v], dtype=np.float32) for k, v in self.state.items()}
+        obs = self.compute_observation()
 
-        return obs, {}
+        info = {
+            "distance_from_goal": self.compute_distance_from_goal(),
+        }
+
+        return obs, info
 
     def step(self, action):
         """
@@ -150,39 +124,15 @@ class BlueRov(gym.Env):
         Returns:
             tuple: (observation, reward, terminated, truncated, info)
         """
-        # Update state according to dynamics model
         self.dynamics.step(self.state, action)
 
-        # Format observation as required by Gymnasium
-        obs = {k: np.array([v], dtype=np.float32) for k, v in self.state.items()}
+        obs = self.compute_observation()
 
-        if self.trajectory is not None:
-            # Add offsets to the observation
-            current_waypoint_idx = self.reward_fn.current_waypoint_idx
-            waypoint = self.trajectory[current_waypoint_idx]
-            obs["x_offset"] = np.array(
-                [waypoint[0] - self.state["x"]], dtype=np.float32
-            )
-            obs["y_offset"] = np.array(
-                [waypoint[1] - self.state["y"]], dtype=np.float32
-            )
-            obs["z_offset"] = np.array(
-                [waypoint[2] - self.state["z"]], dtype=np.float32
-            )
-            obs["theta_offset"] = np.array(
-                [waypoint[3] - self.state["theta"]], dtype=np.float32
-            )
-        else:
-            obs["x_offset"] = np.array([0.0], dtype=np.float32)
-            obs["y_offset"] = np.array([0.0], dtype=np.float32)
-            obs["z_offset"] = np.array([0.0], dtype=np.float32)
-            obs["theta_offset"] = np.array([0.0], dtype=np.float32)
-
-        # Calculate reward based on current state
         reward = self.reward_fn.get_reward(obs)
 
-        # Determine if episode should terminate
+        # Reset conditions
         terminated = False
+        truncated = False
 
         # Check boundary conditions for termination
         if abs(self.state["z"]) > 10.0:  # Depth limit
@@ -192,16 +142,9 @@ class BlueRov(gym.Env):
         ):  # Horizontal boundaries
             terminated = True
 
-        truncated = False  # Episode is not truncated
-        if self.trajectory is not None:
-            waypoint_progress = (
-                self.reward_fn.current_waypoint_idx / self.reward_fn.total_waypoints
-            )
-
         info = {
-            "waypoint_progress": (
-                waypoint_progress if self.trajectory is not None else 0.0
-            )
+            "distance_from_goal": self.compute_distance_from_goal(),
+            "reward": reward,
         }
 
         if self.render_mode == "human":
@@ -228,6 +171,33 @@ class BlueRov(gym.Env):
         self.renderer.step_sim(self.state)
         if self.trajectory is not None:
             self.renderer.visualize_waypoints(
-                self.trajectory[:, :3],
-                current_idx=self.reward_fn.current_waypoint_idx,
+                [[0, 0, 0], self.goal_point[:3]],
+                current_idx=1,
             )
+
+    def compute_observation(self):
+
+        obs = {
+            "offset_x": np.array([self.state["x"] - self.goal_point[0]]),
+            "offset_y": np.array([self.state["y"] - self.goal_point[1]]),
+            "offset_z": np.array([self.state["z"] - self.goal_point[2]]),
+            "offset_theta": np.array([self.state["theta"] - self.goal_point[3]]),
+            "vx": np.array([self.state["vx"]]),
+            "vy": np.array([self.state["vy"]]),
+            "vz": np.array([self.state["vz"]]),
+            "omega": np.array([self.state["omega"]]),
+        }
+
+        return obs
+
+    def compute_distance_from_goal(self):
+
+        return np.linalg.norm(
+            np.array(
+                [
+                    self.state["x"] - self.goal_point[0],
+                    self.state["y"] - self.goal_point[1],
+                    self.state["z"] - self.goal_point[2],
+                ]
+            )
+        )
