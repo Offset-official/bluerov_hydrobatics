@@ -4,12 +4,15 @@ import gymnasium as gym
 import bluerov2_gym
 import typer
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import (
-    CheckpointCallback,
-)
+from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.env_checker import check_env
+import rich
 
-app = typer.Typer()
+import bluerov2_gym.envs
+
+app = typer.Typer(pretty_exceptions_enable=False)
+
 
 @app.command()
 def train(
@@ -18,6 +21,7 @@ def train(
     n_steps: int = 5,
     n_envs: int = 8,
     model_name: str = "bluerov_simplepoint",
+    render_mode: str = None,
 ):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -33,20 +37,37 @@ def train(
         name_prefix=model_name,
     )
 
+    eval_env = gym.make("BlueRov-v0", render_mode=None)
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path="./logs/",
+        log_path="./logs/",
+        eval_freq=500,
+        deterministic=True,
+        render=False,
+    )
+
     vec_env = make_vec_env(
         "BlueRov-v0",
         n_envs=n_envs,
         seed=42,
-        env_kwargs={"render_mode": "human"},
+        env_kwargs={"render_mode": render_mode},
     )
 
-    model = PPO("MultiInputPolicy", vec_env, verbose=1, n_steps=n_steps)
+    env = bluerov2_gym.envs.BlueRov(render_mode=None)
+
+    check_env(env, warn=True, skip_render_check=True)
+
+    print("Environment check passed successfully ✅")
+
+    model = PPO("MultiInputPolicy", vec_env, verbose=1, n_steps=n_steps, batch_size=5)
 
     start_time = time.time()
 
     model.learn(
         total_timesteps=total_timesteps,
         callback=[checkpoint_callback],
+        progress_bar=True,
     )
 
     training_time = time.time() - start_time
@@ -56,6 +77,7 @@ def train(
     print(f"Model saved to {model_path}")
 
     return model
+
 
 if __name__ == "__main__":
     app()
