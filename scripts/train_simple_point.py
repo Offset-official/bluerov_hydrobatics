@@ -163,14 +163,14 @@ def train(
 
     training_time = time.time() - start_time
     print(f"Training completed in {training_time:.2f} seconds")
-    print(f"Model saved to {model_path}")
+    # print(f"Model saved to {model_path}")
     
     # del model
     # # load best model 
     # model = A2C.load(str(best_path))
     # vec_norm = model.get_vec_normalize()
 
-    del model 
+    # del model 
 
 
 
