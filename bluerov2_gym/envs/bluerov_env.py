@@ -150,7 +150,9 @@ class BlueRov(gym.Env):
         is_success = bool(distance_from_goal < self.threshold_distance)
         terminated = bool(terminated or is_success)
 
-        reward = self.reward_fn.get_reward(distance_from_goal, obs["offset_theta"][0], action_magnitude)
+        reward = self.reward_fn.get_reward(
+            distance_from_goal, obs["offset_theta"][0], action_magnitude
+        )
 
         info = {
             "distance_from_goal": distance_from_goal,
@@ -210,7 +212,7 @@ class BlueRov(gym.Env):
                 ]
             )
         )
-    
+
     def compute_action_magnitude(self, action):
         return np.linalg.norm(action)
 
@@ -226,4 +228,8 @@ class BlueRov(gym.Env):
         y = np.sin(phi) * np.sin(theta)
         z = np.cos(phi)
 
-        return np.array([x, y, z, 0])
+        heading_theta = np.random.uniform(
+            0, np.pi
+        )  # do not ever make the vehicle move more than 180 degrees
+
+        return np.array([x, y, z, heading_theta])
