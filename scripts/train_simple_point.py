@@ -38,14 +38,23 @@ def train(
         name_prefix=model_name,
     )
 
-    eval_env = gym.make("BlueRov-v0", render_mode=None)
+    eval_vec_env = VecNormalize(
+        make_vec_env(
+            "BlueRov-v0",
+            n_envs=1,
+            seed=42,
+            env_kwargs={"render_mode": None},
+        )
+    )
+
     eval_callback = EvalCallback(
-        eval_env,
-        best_model_save_path="./logs/",
+        eval_vec_env,
+        best_model_save_path=str(output_dir / "best_checkpoints"),
         log_path="./logs/",
+        verbose=1,
         eval_freq=10000,
         deterministic=True,
-        render=True,
+        render=False,
     )
 
     vec_env = VecNormalize(
@@ -71,6 +80,7 @@ def train(
         n_steps=n_steps,
         batch_size=5,
         device="cpu",
+        tensorboard_log=str("logs"),
     )
 
     start_time = time.time()
