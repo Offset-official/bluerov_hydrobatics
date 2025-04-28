@@ -26,29 +26,52 @@ class BlueRov(gym.Env):
 
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, trajectory_file=None):
         """
         Initialize the BlueROV environment
 
         Args:
             render_mode (str, optional): Rendering mode. Use "human" for visualization.
+            trajectory_file (str, optional): Path to CSV file containing waypoint trajectory.
         """
         super().__init__()
 
         if render_mode is not None:
-
             with resources.path("bluerov2_gym.assets", "BlueRov2.dae") as asset_path:
                 self.model_path = str(asset_path)
             self.renderer = BlueRovRenderer()
             self.render_mode = render_mode
 
         self.dynamics = Dynamics()
+        self.trajectory_file = trajectory_file
+        self.trajectory = None
+        self.threshold_distance = 0.1
+
+        init_x = 0.0
+        init_y = 0.0
+        init_z = 0.0
+        init_theta = 0.0
+
+        # Load trajectory if provided
+        if trajectory_file is not None:
+            self.trajectory = np.loadtxt(trajectory_file, delimiter=",")
+            print(f"Loaded trajectory with {self.trajectory.shape[0]} waypoints")
+            init_x = self.trajectory[0, 0]
+            init_y = self.trajectory[0, 1]
+            init_z = self.trajectory[0, 2]
+            init_theta = self.trajectory[0, 3]
+            self.goal_point = self.trajectory[1, :]
+        else:
+            self.trajectory = None
+            self.goal_point = self.compute_random_goal_point()
+        self.waypoint_idx = 1
+        self.reward_fn = SinglePointReward(threshold=self.threshold_distance)
 
         self.state = {
-            "x": 0.0,  # x position (m)
-            "y": 0.0,  # y position (m)
-            "z": 0.0,  # depth (m)
-            "theta": 0.0,  # heading angle (rad)
+            "x": init_x,  # x position (m)
+            "y": init_y,  # y position (m)
+            "z": init_z,  # depth (m)
+            "theta": init_theta,  # heading angle (rad)
             "vx": 0.0,  # x velocity (m/s)
             "vy": 0.0,  # y velocity (m/s)
             "vz": 0.0,  # vertical velocity (m/s)
@@ -57,16 +80,9 @@ class BlueRov(gym.Env):
 
         self.init_state = deepcopy(self.state)
 
-        self.goal_point = self.compute_random_goal_point()
-
-        self.threshold_distance = 0.1
-
-        self.reward_fn = SinglePointReward(threshold=self.threshold_distance)
-
-        # 4 normalized thruster commands between -1.0 and 1.0
         self.action_space = spaces.Box(
-            low=np.array([-1.0, -1.0, -1.0, -1.0], dtype=np.float32),
-            high=np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32),
+            low=-1.0,
+            high=1.0,
             shape=(4,),
             dtype=np.float32,
         )
@@ -106,7 +122,12 @@ class BlueRov(gym.Env):
         super().reset(seed=seed)
 
         self.state = deepcopy(self.init_state)
-        self.goal_point = self.compute_random_goal_point()
+
+        if self.trajectory is not None:
+            self.waypoint_idx = 1
+            self.goal_point = self.trajectory[self.waypoint_idx, :]
+        else:
+            self.goal_point = self.compute_random_goal_point()
 
         self.disturbance_dist = self.dynamics.reset()
 
@@ -114,6 +135,7 @@ class BlueRov(gym.Env):
 
         info = {
             "distance_from_goal": self.compute_distance_from_goal(),
+            "current_heading": self.state["theta"]
         }
 
         return obs, info
@@ -152,6 +174,10 @@ class BlueRov(gym.Env):
         is_success = bool(distance_from_goal < self.threshold_distance)
         terminated = bool(terminated or is_success)
 
+        if is_success and self.trajectory is not None:
+            self.waypoint_idx += 1
+            self.goal_point = self.trajectory[self.waypoint_idx, :]
+
         reward_tuple = self.reward_fn.get_reward(
             distance_from_goal, obs["offset_theta"][0], action_magnitude
         )
@@ -165,6 +191,7 @@ class BlueRov(gym.Env):
             "action_magnitude": action_magnitude,
             "is_success": is_success,
             "angle_offset": abs(obs["offset_theta"][0]),
+            "current_heading":self.state["theta"]
         }
 
         if self.render_mode == "human":
@@ -177,20 +204,33 @@ class BlueRov(gym.Env):
         Render the environment if in human mode.
         """
         self.renderer.render(self.model_path, self.init_state)
-        self.renderer.visualize_waypoints(
-            [[0, 0, 0, 0], self.goal_point],
-            current_idx=1,
-        )
+        if self.trajectory is not None:
+            self.renderer.visualize_waypoints(
+                self.trajectory,
+                current_idx=self.waypoint_idx,
+            )
+        else:
+            self.renderer.visualize_waypoints(
+                [[0, 0, 0, 0], self.goal_point],
+                current_idx=1,
+            )
 
     def step_sim(self):
         """
         Update the visualization with the current state.
         """
         self.renderer.step_sim(self.state)
-        self.renderer.visualize_waypoints(
-            [[0, 0, 0, 0], self.goal_point],
-            current_idx=1,
-        )
+        
+        if self.trajectory is not None:
+            self.renderer.visualize_waypoints(
+                self.trajectory,
+                current_idx=self.waypoint_idx,
+            )
+        else:
+            self.renderer.visualize_waypoints(
+                [[0, 0, 0, 0], self.goal_point],
+                current_idx=1,
+            )
 
     def compute_observation(self):
 

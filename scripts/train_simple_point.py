@@ -44,7 +44,7 @@ def train(
             "BlueRov-v0",
             n_envs=1,
             seed=42,
-            env_kwargs={"render_mode": "human"},
+            env_kwargs={"render_mode": "none"},
         )
     )
 
