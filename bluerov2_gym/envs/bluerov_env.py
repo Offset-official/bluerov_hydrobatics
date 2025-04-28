@@ -150,9 +150,11 @@ class BlueRov(gym.Env):
         Returns:
             tuple: (observation, reward, terminated, truncated, info)
         """
-        self.dynamics.step(self.state, action)
+        self.dynamics.step(self.state, action) 
 
         obs = self.compute_observation()
+
+        # print(obs)
 
         # Reset conditions
         terminated = False
@@ -176,22 +178,26 @@ class BlueRov(gym.Env):
             self.waypoint_idx += 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
 
-        reward = self.reward_fn.get_reward(
+        reward_tuple = self.reward_fn.get_reward(
             distance_from_goal, obs["offset_theta"][0], action_magnitude
         )
 
+        total_reward = np.sum(reward_tuple)
+
         info = {
             "distance_from_goal": distance_from_goal,
-            "reward": reward,
+            "reward_tuple": reward_tuple,
+            "reward": total_reward,
             "action_magnitude": action_magnitude,
             "is_success": is_success,
+            "angle_offset": abs(obs["offset_theta"][0]),
             "current_heading":self.state["theta"]
         }
 
         if self.render_mode == "human":
             self.step_sim()
 
-        return obs, reward, terminated, truncated, info
+        return obs, total_reward, terminated, truncated, info
 
     def render(self):
         """
