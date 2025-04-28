@@ -24,13 +24,17 @@ def evaluate(model_path: str, num_episodes: int):
         distances_from_goal = []
         time.sleep(10)
         current_ep_rewards = []
+        current_ep_reward_tuples = []
+        current_ep_angle_offsets = []
         while not done:
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, terminated, truncated, info = env.step(action)
             total_reward += reward
             current_ep_rewards.append(reward)
+            current_ep_reward_tuples.append(info["reward_tuple"])
 
             distances_from_goal.append(info["distance_from_goal"])
+            current_ep_angle_offsets.append(info["angle_offset"])
             # print(f"Distance from goal: {info['distance_from_goal']:.2f}")
 
             # Render and slow down for visibility
@@ -44,13 +48,30 @@ def evaluate(model_path: str, num_episodes: int):
         episode_rewards.append(total_reward)
         success_count += success
         print(f"Episode {ep}/{num_episodes} — Reward: {total_reward:.2f}  Success: {success}")
-        plt.plot(distances_from_goal, label="Distance from goal")
-        plt.plot(current_ep_rewards, label="Reward")
-        plt.xlabel("Time step")
-        # plt.ylabel("Distance from goal")
-        plt.title(f"Episode {ep}")
-        plt.legend()
-        plt.grid()
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+
+        # Upper plot: Distance from goal and reward
+        ax1.plot(distances_from_goal, label="Distance from goal", color="blue")
+        ax1.plot(current_ep_rewards, label="Reward", color="orange")
+        ax1.plot(current_ep_angle_offsets, label="Angle offset", color="cyan")
+        ax1.set_xlabel("Time step")
+        ax1.set_ylabel("Value")
+        ax1.set_title(f"Episode {ep} - Distance from Goal and Reward")
+        ax1.legend()
+        ax1.grid()
+
+        # Bottom plot: Reward components
+        ax2.plot([x[0] for x in current_ep_reward_tuples], label="Position reward", color="green")
+        ax2.plot([x[1] for x in current_ep_reward_tuples], label="Angle reward", color="red")
+        ax2.plot([x[2] for x in current_ep_reward_tuples], label="Action reward", color="purple")
+        ax2.plot([x[3] for x in current_ep_reward_tuples], label="Completion reward", color="brown")
+        ax2.set_xlabel("Time step")
+        ax2.set_ylabel("Reward Components")
+        ax2.set_title(f"Episode {ep} - Reward Components")
+        ax2.legend()
+        ax2.grid()
+
+        plt.tight_layout()
         plt.show()
 
 
