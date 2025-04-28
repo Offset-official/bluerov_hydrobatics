@@ -57,7 +57,7 @@ class BlueRov(gym.Env):
 
         self.init_state = deepcopy(self.state)
 
-        self.goal_point = self.compute_random_goal_point() 
+        self.goal_point = self.compute_random_goal_point()
 
         self.threshold_distance = 0.1
 
