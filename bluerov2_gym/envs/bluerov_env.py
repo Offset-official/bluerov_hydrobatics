@@ -172,7 +172,7 @@ class BlueRov(gym.Env):
         """
         self.renderer.render(self.model_path, self.init_state)
         self.renderer.visualize_waypoints(
-            [[0, 0, 0], self.goal_point[:3]],
+            [[0, 0, 0, 0], self.goal_point],
             current_idx=1,
         )
 
@@ -182,7 +182,7 @@ class BlueRov(gym.Env):
         """
         self.renderer.step_sim(self.state)
         self.renderer.visualize_waypoints(
-            [[0, 0, 0], self.goal_point[:3]],
+            [[0, 0, 0, 0], self.goal_point],
             current_idx=1,
         )
 
