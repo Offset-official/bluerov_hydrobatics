@@ -55,6 +55,7 @@ def train(
         verbose=1,
         eval_freq=1000,
         deterministic=True,
+        n_eval_episodes=20,
         # render=True,
     )
 

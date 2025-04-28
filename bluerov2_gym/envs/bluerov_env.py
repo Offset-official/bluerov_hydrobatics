@@ -46,6 +46,7 @@ class BlueRov(gym.Env):
         self.trajectory_file = trajectory_file
         self.trajectory = None
         self.threshold_distance = 0.1
+        self.angular_threshold = 0.1
 
         init_x = 0.0
         init_y = 0.0
@@ -65,7 +66,7 @@ class BlueRov(gym.Env):
             self.trajectory = None
             self.goal_point = self.compute_random_goal_point()
         self.waypoint_idx = 1
-        self.reward_fn = SinglePointReward(threshold=self.threshold_distance)
+        self.reward_fn = SinglePointReward(threshold=self.threshold_distance, angular_threshold=self.angular_threshold)
 
         self.state = {
             "x": init_x,  # x position (m)
@@ -169,9 +170,14 @@ class BlueRov(gym.Env):
             terminated = True
 
         distance_from_goal = self.compute_distance_from_goal()
+
+        if (distance_from_goal > 1.5):
+            terminated = True
+
         action_magnitude = self.compute_action_magnitude(action)
 
-        is_success = bool(distance_from_goal < self.threshold_distance)
+        is_success = bool(distance_from_goal < self.threshold_distance and 
+                        (obs["offset_theta"][0] < self.angular_threshold)) 
         terminated = bool(terminated or is_success)
 
         if is_success and self.trajectory is not None:
