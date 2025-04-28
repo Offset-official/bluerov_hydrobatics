@@ -1,5 +1,7 @@
 import time
 from pathlib import Path
+import gymnasium as gym
+import bluerov2_gym
 import typer
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import (
@@ -8,7 +10,6 @@ from stable_baselines3.common.callbacks import (
 from stable_baselines3.common.env_util import make_vec_env
 
 app = typer.Typer()
-
 
 @app.command()
 def train(
@@ -33,9 +34,10 @@ def train(
     )
 
     vec_env = make_vec_env(
-        "bluerov2:bluerov2-v0",
+        "BlueRov-v0",
         n_envs=n_envs,
         seed=42,
+        env_kwargs={"render_mode": "human"},
     )
 
     model = PPO("MultiInputPolicy", vec_env, verbose=1, n_steps=n_steps)
@@ -54,9 +56,6 @@ def train(
     print(f"Model saved to {model_path}")
 
     return model
-
-
-app = typer.Typer(help="Train BlueRov2 on trajectory following")
 
 if __name__ == "__main__":
     app()
