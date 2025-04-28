@@ -6,6 +6,7 @@ from gymnasium import spaces
 from bluerov2_gym.envs.core.dynamics import Dynamics
 from bluerov2_gym.envs.core.rewards import Reward, SinglePointReward
 from bluerov2_gym.envs.core.visualization.renderer import BlueRovRenderer
+from random import random
 
 
 class BlueRov(gym.Env):
@@ -56,7 +57,7 @@ class BlueRov(gym.Env):
 
         self.init_state = deepcopy(self.state)
 
-        self.goal_point = np.array([0, -1, 0, 0], dtype=np.float64)  # x,y,z,theta (yaw)
+        self.goal_point = self.compute_random_goal_point() 
 
         self.threshold_distance = 0.1
 
@@ -105,6 +106,7 @@ class BlueRov(gym.Env):
         super().reset(seed=seed)
 
         self.state = deepcopy(self.init_state)
+        self.goal_point = self.compute_random_goal_point()
 
         self.disturbance_dist = self.dynamics.reset()
 
@@ -206,3 +208,17 @@ class BlueRov(gym.Env):
                 ]
             )
         )
+
+    def compute_random_goal_point(self):
+        """
+        Generate a random point on the surface of a unit sphere around the origin.
+        """
+
+        theta = 2 * np.pi * random()
+        phi = np.arccos(1 - 2 * random())
+
+        x = np.sin(phi) * np.cos(theta)
+        y = np.sin(phi) * np.sin(theta)
+        z = np.cos(phi)
+
+        return np.array([x, y, z, 0])
