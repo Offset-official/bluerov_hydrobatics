@@ -62,7 +62,7 @@ def train(
 
     print("Environment check passed successfully ✅")
 
-    model = PPO("MultiInputPolicy", vec_env, verbose=1, n_steps=n_steps, batch_size=5)
+    model = PPO("MultiInputPolicy", vec_env, verbose=1, n_steps=n_steps, batch_size=5,device="cpu")
 
     start_time = time.time()
 
