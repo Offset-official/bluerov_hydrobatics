@@ -18,7 +18,7 @@ app = typer.Typer(pretty_exceptions_enable=False)
 @app.command()
 def train(
     output_dir: str = "./trained_models",
-    total_timesteps: int = 1000000,
+    total_timesteps: int = 10000,
     n_steps: int = 5,
     n_envs: int = 8,
     model_name: str = "bluerov_simplepoint",
@@ -33,9 +33,10 @@ def train(
     print(f"Using {n_envs} parallel environments")
 
     checkpoint_callback = CheckpointCallback(
-        save_freq=10000,
+        save_freq=1000,
         save_path=str(output_dir / "checkpoints"),
         name_prefix=model_name,
+        verbose=1
     )
 
     eval_vec_env = VecNormalize(
@@ -43,7 +44,7 @@ def train(
             "BlueRov-v0",
             n_envs=1,
             seed=42,
-            env_kwargs={"render_mode": None},
+            env_kwargs={"render_mode": "human"},
         )
     )
 
@@ -52,9 +53,9 @@ def train(
         best_model_save_path=str(output_dir / "best_checkpoints"),
         log_path="./logs/",
         verbose=1,
-        eval_freq=10000,
+        eval_freq=1000,
         deterministic=True,
-        render=False,
+        # render=True,
     )
 
     vec_env = VecNormalize(
@@ -62,7 +63,7 @@ def train(
             "BlueRov-v0",
             n_envs=n_envs,
             seed=42,
-            env_kwargs={"render_mode": render_mode},
+            env_kwargs={"render_mode": None},
             vec_env_cls=SubprocVecEnv,
         )
     )
@@ -76,7 +77,7 @@ def train(
     model = PPO(
         "MultiInputPolicy",
         vec_env,
-        verbose=1,
+        verbose=0,
         n_steps=n_steps,
         batch_size=5,
         device="cpu",
