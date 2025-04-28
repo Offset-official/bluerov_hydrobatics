@@ -36,7 +36,7 @@ def train(
         save_freq=1000,
         save_path=str(output_dir / "checkpoints"),
         name_prefix=model_name,
-        verbose=1
+        verbose=1,
     )
 
     eval_vec_env = VecNormalize(
@@ -44,7 +44,7 @@ def train(
             "BlueRov-v0",
             n_envs=1,
             seed=42,
-            env_kwargs={"render_mode": "none"},
+            env_kwargs={"render_mode": render_mode},
         )
     )
 
@@ -55,7 +55,7 @@ def train(
         verbose=1,
         eval_freq=1000,
         deterministic=True,
-        # render=True,
+        render=True if render_mode else False,
     )
 
     vec_env = VecNormalize(
