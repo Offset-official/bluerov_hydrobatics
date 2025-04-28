@@ -164,6 +164,7 @@ class BlueRov(gym.Env):
             "reward": total_reward,
             "action_magnitude": action_magnitude,
             "is_success": is_success,
+            "angle_offset": abs(obs["offset_theta"][0]),
         }
 
         if self.render_mode == "human":
