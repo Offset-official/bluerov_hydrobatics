@@ -46,7 +46,7 @@ class SinglePointReward:
         r_angle = 0.1 * np.exp(-(theta_offset))
         r_action = 0.05 * np.exp(-(action_magnitude))
 
-        return r_pos + r_angle + r_action + r_completion
+        return np.array([r_pos, r_angle, r_action, r_completion])
 
 
 class WayPointReward:
