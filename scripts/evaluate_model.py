@@ -22,7 +22,7 @@ def evaluate(model_path: str, num_episodes: int):
         success = False
         env.render()
         distances_from_goal = []
-        time.sleep(5)
+        time.sleep(10)
         current_ep_rewards = []
         current_ep_reward_tuples = []
         current_ep_angle_offsets = []
