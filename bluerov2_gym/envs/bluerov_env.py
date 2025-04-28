@@ -64,8 +64,8 @@ class BlueRov(gym.Env):
 
         # 4 normalized thruster commands between -1.0 and 1.0
         self.action_space = spaces.Box(
-            low=-1.0,
-            high=1.0,
+            low=np.array([0.0,-1.0,0.0,0.0],dtype=np.float32),
+            high=np.array([0.0,1.0,0.0,0.0],dtype=np.float32),
             shape=(4,),
             dtype=np.float32,
         )
