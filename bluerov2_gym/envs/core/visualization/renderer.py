@@ -31,7 +31,7 @@ class BlueRovRenderer:
         water_volume_transform = tf.translation_matrix([0, 0, -5])
         self.vis["water_volume"].set_object(water_volume, water_volume_material)
         self.vis["water_volume"].set_transform(water_volume_transform)
-        print("model_path: ", model_path)
+        # print("model_path: ", model_path)
         self.vis["vessel"].set_object(
             g.DaeMeshGeometry.from_file(model_path),
             g.MeshLambertMaterial(color=0x0000FF, wireframe=False),

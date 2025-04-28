@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+import time
+import argparse
+
+import gymnasium as gym
+import bluerov2_gym             # ensure custom env is registered
+from stable_baselines3 import PPO
+import matplotlib.pyplot as plt
+
+def evaluate(model_path: str, num_episodes: int):
+    # Create a single env with MeshCat rendering enabled
+    env = gym.make("BlueRov-v0", render_mode="human")
+    model = PPO.load(model_path)
+
+    episode_rewards = []
+    success_count = 0
+
+    for ep in range(1, num_episodes + 1):
+        obs, _ = env.reset()
+        done = False
+        total_reward = 0.0
+        success = False
+        env.render()
+        distances_from_goal = []
+        time.sleep(10)
+        current_ep_rewards = []
+        current_ep_reward_tuples = []
+        current_ep_angle_offsets = []
+        while not done:
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, terminated, truncated, info = env.step(action)
+            total_reward += reward
+            current_ep_rewards.append(reward)
+            current_ep_reward_tuples.append(info["reward_tuple"])
+
+            distances_from_goal.append(info["distance_from_goal"])
+            current_ep_angle_offsets.append(info["angle_offset"])
+            # print(f"Distance from goal: {info['distance_from_goal']:.2f}")
+
+            # Render and slow down for visibility
+            
+            time.sleep(0.1)
+            env.unwrapped.step_sim()
+            done = terminated or truncated
+            if done:
+                success = bool(info.get("is_success", False))
+
+        episode_rewards.append(total_reward)
+        success_count += success
+        print(f"Episode {ep}/{num_episodes} — Reward: {total_reward:.2f}  Success: {success}")
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+
+        # Upper plot: Distance from goal and reward
+        ax1.plot(distances_from_goal, label="Distance from goal", color="blue")
+        ax1.plot(current_ep_rewards, label="Reward", color="orange")
+        ax1.plot(current_ep_angle_offsets, label="Angle offset", color="cyan")
+        ax1.set_xlabel("Time step")
+        ax1.set_ylabel("Value")
+        ax1.set_title(f"Episode {ep} - Distance from Goal and Reward")
+        ax1.legend()
+        ax1.grid()
+
+        # Bottom plot: Reward components
+        ax2.plot([x[0] for x in current_ep_reward_tuples], label="Position reward", color="green")
+        ax2.plot([x[1] for x in current_ep_reward_tuples], label="Angle reward", color="red")
+        ax2.plot([x[2] for x in current_ep_reward_tuples], label="Action reward", color="purple")
+        ax2.plot([x[3] for x in current_ep_reward_tuples], label="Completion reward", color="brown")
+        ax2.set_xlabel("Time step")
+        ax2.set_ylabel("Reward Components")
+        ax2.set_title(f"Episode {ep} - Reward Components")
+        ax2.legend()
+        ax2.grid()
+
+        plt.tight_layout()
+        plt.show()
+
+
+    # Summary
+    mean_reward = sum(episode_rewards) / num_episodes
+    success_rate = success_count / num_episodes * 100.0
+    print("\n=== Evaluation Summary ===")
+    print(f"Mean episode reward : {mean_reward:.2f}")
+    print(f"Success rate         : {success_count}/{num_episodes} ({success_rate:.1f}%)")
+
+    env.close()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Evaluate a PPO model on BlueRov-v0 and report metrics"
+    )
+    parser.add_argument(
+        "--model_path",
+        help="Path to the saved model (e.g. ./trained_models/bluerov_simplepoint.zip)"
+    )
+    parser.add_argument(
+        "--num-episodes",
+        type=int,
+        default=10,
+        help="Number of episodes to run for evaluation"
+    )
+    args = parser.parse_args()
+
+    evaluate(args.model_path, args.num_episodes)
