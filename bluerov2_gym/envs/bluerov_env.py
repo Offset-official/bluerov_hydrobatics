@@ -152,13 +152,16 @@ class BlueRov(gym.Env):
         is_success = bool(distance_from_goal < self.threshold_distance)
         terminated = bool(terminated or is_success)
 
-        reward = self.reward_fn.get_reward(
+        reward_tuple = self.reward_fn.get_reward(
             distance_from_goal, obs["offset_theta"][0], action_magnitude
         )
 
+        total_reward = np.sum(reward_tuple)
+
         info = {
             "distance_from_goal": distance_from_goal,
-            "reward": reward,
+            "reward_tuple": reward_tuple,
+            "reward": total_reward,
             "action_magnitude": action_magnitude,
             "is_success": is_success,
         }
@@ -166,7 +169,7 @@ class BlueRov(gym.Env):
         if self.render_mode == "human":
             self.step_sim()
 
-        return obs, reward, terminated, truncated, info
+        return obs, total_reward, terminated, truncated, info
 
     def render(self):
         """

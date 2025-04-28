@@ -31,7 +31,7 @@ def evaluate(model_path: str, num_episodes: int):
             current_ep_rewards.append(reward)
 
             distances_from_goal.append(info["distance_from_goal"])
-            print(f"Distance from goal: {info['distance_from_goal']:.2f}")
+            # print(f"Distance from goal: {info['distance_from_goal']:.2f}")
 
             # Render and slow down for visibility
             
