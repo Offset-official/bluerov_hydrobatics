@@ -40,11 +40,11 @@ class SinglePointReward:
         r_completion = 0
         if distance_to_goal < self.threshold:
             distance_to_goal = 0.0
-            r_completion = 100
+            r_completion = 1000
 
-        r_pos = -np.exp((distance_to_goal**2))
-        r_angle = -0.5 * np.exp((theta_offset**2))
-        r_action = -0.2 * np.exp((action_magnitude))
+        r_pos = np.exp(-(distance_to_goal**2))
+        r_angle = 0.1 * np.exp(-(theta_offset**2))
+        r_action = 0.05 * np.exp(-(action_magnitude))
 
         return np.array([r_pos, r_angle, r_action, r_completion])
 
