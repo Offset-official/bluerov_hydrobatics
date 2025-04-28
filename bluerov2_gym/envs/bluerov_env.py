@@ -87,7 +87,6 @@ class BlueRov(gym.Env):
 
         self.dt = 0.1  # Time step (seconds)
         self.render_mode = render_mode
-        self.trajectory_file = trajectory_file
 
         if self.render_mode == "human":
             self.render()
@@ -165,8 +164,8 @@ class BlueRov(gym.Env):
         """
         self.renderer.render(self.model_path, self.init_state)
         self.renderer.visualize_waypoints(
-            self.trajectory[:, :3],
-            current_idx=self.reward_fn.current_waypoint_idx,
+            [[0, 0, 0], self.goal_point[:3]],
+            current_idx=1,
         )
 
     def step_sim(self):
