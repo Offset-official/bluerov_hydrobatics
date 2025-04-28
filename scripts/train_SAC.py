@@ -3,7 +3,7 @@ from pathlib import Path
 import gymnasium as gym
 import bluerov2_gym
 import typer
-from stable_baselines3 import PPO, SAC
+from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.env_checker import check_env
@@ -21,15 +21,12 @@ def train(
     total_timesteps: int = 1000000,
     n_steps: int = 8,
     n_envs: int = 8,
-    model_name: str = "bluerov_simplepoint",
+    model_name: str = "bluerov_sac_simplepoint",
     render_mode: str = None,
-    model_type: str = "ppo",  # new argument
 ):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Update model_name to include model_type for clarity
-    model_name = f"{model_type.lower()}_{model_name}"
     model_path = output_dir / model_name
 
     print(f"Model will be saved to: {model_path}")
@@ -58,8 +55,7 @@ def train(
         verbose=1,
         eval_freq=1000,
         deterministic=True,
-        n_eval_episodes=20,
-        # render=True,
+        render=True if render_mode else False,
     )
 
     vec_env = VecNormalize(
@@ -78,31 +74,18 @@ def train(
 
     print("Environment check passed successfully ✅")
 
-    if model_type.lower() == "ppo":
-        model = PPO(
-            "MultiInputPolicy",
-            vec_env,
-            verbose=0,
-            n_steps=n_steps,
-            batch_size=64,
-            device="cpu",
-            tensorboard_log=str("logs"),
-        )
-    elif model_type.lower() == "sac":
-        model = SAC(
-            "MultiInputPolicy",
-            vec_env,
-            verbose=0,
-            tensorboard_log=str(output_dir / "tensorboard"),
-            learning_starts=1000,
-            batch_size=64,
-            buffer_size=1000000,
-            learning_rate=0.001,
-            policy_kwargs=dict(net_arch=[256, 256]),
-            device="cuda",
-        )
-    else:
-        raise ValueError(f"Unsupported model type: {model_type}")
+    model = SAC(
+        "MultiInputPolicy",
+        vec_env,
+        verbose=0,
+        tensorboard_log=str(output_dir / "tensorboard"),
+        learning_starts=1000,
+        batch_size=64,
+        buffer_size=1000000,
+        learning_rate=0.001,
+        policy_kwargs=dict(net_arch=[256, 256]),
+        device="cuda",
+    )
 
     start_time = time.time()
 

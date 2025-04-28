@@ -3,14 +3,21 @@ import time
 import argparse
 
 import gymnasium as gym
-import bluerov2_gym             # ensure custom env is registered
+import bluerov2_gym  # ensure custom env is registered
 from stable_baselines3 import PPO
+from stable_baselines3 import SAC
 import matplotlib.pyplot as plt
 
-def evaluate(model_path: str, num_episodes: int):
+
+def evaluate(model_path: str, num_episodes: int, model_type: str):
     # Create a single env with MeshCat rendering enabled
     env = gym.make("BlueRov-v0", render_mode="human")
-    model = PPO.load(model_path)
+    if model_type.lower() == "ppo":
+        model = PPO.load(model_path)
+    elif model_type.lower() == "sac":
+        model = SAC.load(model_path)
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}")
 
     episode_rewards = []
     success_count = 0
@@ -38,7 +45,7 @@ def evaluate(model_path: str, num_episodes: int):
             # print(f"Distance from goal: {info['distance_from_goal']:.2f}")
 
             # Render and slow down for visibility
-            
+
             time.sleep(0.1)
             env.unwrapped.step_sim()
             done = terminated or truncated
@@ -47,7 +54,9 @@ def evaluate(model_path: str, num_episodes: int):
 
         episode_rewards.append(total_reward)
         success_count += success
-        print(f"Episode {ep}/{num_episodes} — Reward: {total_reward:.2f}  Success: {success}")
+        print(
+            f"Episode {ep}/{num_episodes} — Reward: {total_reward:.2f}  Success: {success}"
+        )
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
 
         # Upper plot: Distance from goal and reward
@@ -61,10 +70,24 @@ def evaluate(model_path: str, num_episodes: int):
         ax1.grid()
 
         # Bottom plot: Reward components
-        ax2.plot([x[0] for x in current_ep_reward_tuples], label="Position reward", color="green")
-        ax2.plot([x[1] for x in current_ep_reward_tuples], label="Angle reward", color="red")
-        ax2.plot([x[2] for x in current_ep_reward_tuples], label="Action reward", color="purple")
-        ax2.plot([x[3] for x in current_ep_reward_tuples], label="Completion reward", color="brown")
+        ax2.plot(
+            [x[0] for x in current_ep_reward_tuples],
+            label="Position reward",
+            color="green",
+        )
+        ax2.plot(
+            [x[1] for x in current_ep_reward_tuples], label="Angle reward", color="red"
+        )
+        ax2.plot(
+            [x[2] for x in current_ep_reward_tuples],
+            label="Action reward",
+            color="purple",
+        )
+        ax2.plot(
+            [x[3] for x in current_ep_reward_tuples],
+            label="Completion reward",
+            color="brown",
+        )
         ax2.set_xlabel("Time step")
         ax2.set_ylabel("Reward Components")
         ax2.set_title(f"Episode {ep} - Reward Components")
@@ -74,30 +97,39 @@ def evaluate(model_path: str, num_episodes: int):
         plt.tight_layout()
         plt.show()
 
-
     # Summary
     mean_reward = sum(episode_rewards) / num_episodes
     success_rate = success_count / num_episodes * 100.0
     print("\n=== Evaluation Summary ===")
     print(f"Mean episode reward : {mean_reward:.2f}")
-    print(f"Success rate         : {success_count}/{num_episodes} ({success_rate:.1f}%)")
+    print(
+        f"Success rate         : {success_count}/{num_episodes} ({success_rate:.1f}%)"
+    )
 
     env.close()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Evaluate a PPO model on BlueRov-v0 and report metrics"
+        description="Evaluate a PPO or SAC model on BlueRov-v0 and report metrics"
     )
     parser.add_argument(
         "--model_path",
-        help="Path to the saved model (e.g. ./trained_models/bluerov_simplepoint.zip)"
+        help="Path to the saved model (e.g. ./trained_models/bluerov_simplepoint.zip)",
     )
     parser.add_argument(
         "--num-episodes",
         type=int,
         default=10,
-        help="Number of episodes to run for evaluation"
+        help="Number of episodes to run for evaluation",
+    )
+    parser.add_argument(
+        "--model-type",
+        type=str,
+        default="ppo",
+        choices=["ppo", "sac"],
+        help="Type of RL model to evaluate (ppo or sac)",
     )
     args = parser.parse_args()
 
-    evaluate(args.model_path, args.num_episodes)
+    evaluate(args.model_path, args.num_episodes, args.model_type)
