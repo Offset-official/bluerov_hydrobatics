@@ -175,18 +175,18 @@ class BlueRov(gym.Env):
         terminated = False
         truncated = False
 
-        # Check boundary conditions for termination
-        if abs(self.state["z"]) > 10.0:  # Depth limit
-            terminated = True
-        if (
-            abs(self.state["x"]) > 15.0 or abs(self.state["y"]) > 15.0
-        ):  # Horizontal boundaries
-            terminated = True
+        # # Check boundary conditions for termination
+        # if abs(self.state["z"]) > 10.0:  # Depth limit
+        #     terminated = True
+        # if (
+        #     abs(self.state["x"]) > 15.0 or abs(self.state["y"]) > 15.0
+        # ):  # Horizontal boundaries
+        #     terminated = True
 
         distance_from_goal = self.compute_distance_from_goal()
 
-        if distance_from_goal > self.distance_to_goal_from_start + 0.5:
-            terminated = True
+        # if distance_from_goal > self.distance_to_goal_from_start + 0.5:
+        #     terminated = True
 
         action_magnitude = self.compute_action_magnitude(action)
 
