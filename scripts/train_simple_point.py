@@ -19,7 +19,7 @@ app = typer.Typer(pretty_exceptions_enable=False)
 @app.command()
 def train(
     output_dir: str = "./trained_models",
-    total_timesteps: int = 1000000,
+    total_timesteps: int = 10000,
     n_steps: int = 8,
     n_envs: int = 8,
     model_name: str = "bluerov_simplepoint",
@@ -34,12 +34,12 @@ def train(
     print(f"Model will be saved to: {model_path}")
     print(f"Using {n_envs} parallel environments")
 
-    checkpoint_callback = CheckpointCallback(
-        save_freq=1000,
-        save_path=str(output_dir / "checkpoints"),
-        name_prefix=model_name,
-        verbose=1,
-    )
+    # checkpoint_callback = CheckpointCallback(
+    #     save_freq=1000,
+    #     save_path=str(output_dir / "checkpoints"),
+    #     name_prefix=model_name,
+    #     verbose=1,
+    # )
 
     eval_vec_env = VecNormalize(
         make_vec_env(
@@ -102,8 +102,8 @@ def train(
     training_time = time.time() - start_time
     print(f"Training completed in {training_time:.2f} seconds")
 
-    model.save(model_path)
-    print(f"Model saved to {model_path}")
+    # model.save(model_path)
+    # print(f"Model saved to {model_path}")
 
     return model
 
