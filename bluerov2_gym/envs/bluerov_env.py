@@ -209,7 +209,7 @@ class BlueRov(gym.Env):
             action_magnitude,
             self.number_of_steps,
         )
-
+        prev_distance_from_goal = distance_from_goal
         total_reward = reward_tuple[0]
 
         info = {
