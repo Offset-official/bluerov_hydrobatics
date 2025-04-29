@@ -185,6 +185,7 @@ class BlueRov(gym.Env):
         if is_success and self.trajectory is not None:
             self.waypoint_idx += 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
+            terminated = False
 
         reward_tuple = self.reward_fn.get_reward(
             distance_from_goal, obs["offset_theta"][0], action_magnitude
