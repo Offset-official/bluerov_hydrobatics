@@ -31,7 +31,6 @@ def evaluate(
     episode_rewards = []
     success_count = 0
 
-    
     for ep in range(1, num_episodes + 1):
         obs = env.reset()
         done = False

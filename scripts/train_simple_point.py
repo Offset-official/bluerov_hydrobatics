@@ -100,7 +100,6 @@ def train(
         tensorboard_log="logs",
     )
 
-
     start_time = time.time()
 
     model.learn(
@@ -111,9 +110,6 @@ def train(
 
     training_time = time.time() - start_time
     print(f"Training completed in {training_time:.2f} seconds")
-
-    # model.save(model_path)
-    # print(f"Model saved to {model_path}")
 
     return model
 
