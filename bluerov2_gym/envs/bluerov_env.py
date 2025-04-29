@@ -48,6 +48,8 @@ class BlueRov(gym.Env):
         self.threshold_distance = 0.1
         self.angular_threshold = 0.1
 
+        self.distance_to_goal_from_start = 0.0
+
         init_x = 0.0
         init_y = 0.0
         init_z = 0.0
@@ -64,7 +66,9 @@ class BlueRov(gym.Env):
             self.goal_point = self.trajectory[1, :]
         else:
             self.trajectory = None
-            self.goal_point = self.compute_random_goal_point()
+            self.goal_point, self.distance_to_goal_from_start = (
+                self.compute_random_goal_point()
+            )
         self.waypoint_idx = 1
         self.reward_fn = SinglePointReward(
             threshold=self.threshold_distance, angular_threshold=self.angular_threshold
@@ -80,6 +84,9 @@ class BlueRov(gym.Env):
             "vz": 0.0,  # vertical velocity (m/s)
             "omega": 0.0,  # angular velocity (rad/s)
         }
+
+        if self.trajectory is not None:
+            self.distance_to_goal_from_start = self.compute_distance_from_goal()
 
         self.init_state = deepcopy(self.state)
 
@@ -130,7 +137,9 @@ class BlueRov(gym.Env):
             self.waypoint_idx = 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
         else:
-            self.goal_point = self.compute_random_goal_point()
+            self.goal_point, self.distance_to_goal_from_start = (
+                self.compute_random_goal_point()
+            )
 
         self.disturbance_dist = self.dynamics.reset()
 
@@ -157,9 +166,6 @@ class BlueRov(gym.Env):
 
         obs = self.compute_observation()
 
-        # print(obs)
-
-        # Reset conditions
         terminated = False
         truncated = False
 
@@ -173,7 +179,7 @@ class BlueRov(gym.Env):
 
         distance_from_goal = self.compute_distance_from_goal()
 
-        if distance_from_goal > 1.5:
+        if distance_from_goal > self.distance_to_goal_from_start + 0.5:
             terminated = True
 
         action_magnitude = self.compute_action_magnitude(action)
@@ -182,14 +188,13 @@ class BlueRov(gym.Env):
             distance_from_goal < self.threshold_distance
             and (abs(obs["offset_theta"][0]) < self.angular_threshold)
         )
-        # print("SUCCESS", is_success)
-        # print("OFFSET THEETA REACHES", obs["offset_theta"][0] < self.angular_threshold)
-        # print("offset theta", obs["offset_theta"][0], "self thereshold", self.angular_threshold)
+
         terminated = bool(terminated or is_success)
 
         if is_success and self.trajectory is not None:
             self.waypoint_idx += 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
+            self.distance_to_goal_from_start = self.compute_distance_from_goal()
             terminated = False
 
         reward_tuple = self.reward_fn.get_reward(
@@ -278,18 +283,19 @@ class BlueRov(gym.Env):
 
     def compute_random_goal_point(self):
         """
-        Generate a random point on the surface of a unit sphere around the origin.
+        Generate a random point anywhere within a sphere of radius R around the origin.
         """
-
+        R = 2
         theta = 2 * np.pi * random()
         phi = np.arccos(1 - 2 * random())
+        r = R * (random() ** (1 / 3))  # Cube root for uniform distribution in volume
 
-        x = np.sin(phi) * np.cos(theta)
-        y = np.sin(phi) * np.sin(theta)
-        z = np.cos(phi)
+        x = r * np.sin(phi) * np.cos(theta)
+        y = r * np.sin(phi) * np.sin(theta)
+        z = r * np.cos(phi)
 
         heading_theta = np.random.uniform(
-            0, np.pi
+            -np.pi / 2, np.pi / 2
         )  # do not ever make the vehicle move more than 180 degrees
 
-        return np.array([x, y, z, heading_theta])
+        return np.array([x, y, z, heading_theta]), r
