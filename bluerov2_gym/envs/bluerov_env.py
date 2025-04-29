@@ -74,6 +74,8 @@ class BlueRov(gym.Env):
             threshold=self.threshold_distance, angular_threshold=self.angular_threshold
         )
 
+        self.number_of_steps = 0
+
         self.state = {
             "x": init_x,  # x position (m)
             "y": init_y,  # y position (m)
@@ -133,6 +135,8 @@ class BlueRov(gym.Env):
 
         self.state = deepcopy(self.init_state)
 
+        self.number_of_steps = 0
+
         if self.trajectory is not None:
             self.waypoint_idx = 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
@@ -163,6 +167,8 @@ class BlueRov(gym.Env):
             tuple: (observation, reward, terminated, truncated, info)
         """
         self.dynamics.step(self.state, action)
+
+        self.number_of_steps += 1
 
         obs = self.compute_observation()
 
@@ -198,7 +204,10 @@ class BlueRov(gym.Env):
             terminated = False
 
         reward_tuple = self.reward_fn.get_reward(
-            distance_from_goal, obs["offset_theta"][0], action_magnitude
+            distance_from_goal,
+            obs["offset_theta"][0],
+            action_magnitude,
+            self.number_of_steps,
         )
 
         total_reward = np.sum(reward_tuple)
