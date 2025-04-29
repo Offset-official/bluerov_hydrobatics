@@ -157,9 +157,6 @@ class BlueRov(gym.Env):
 
         obs = self.compute_observation()
 
-        # print(obs)
-
-        # Reset conditions
         terminated = False
         truncated = False
 
@@ -182,9 +179,7 @@ class BlueRov(gym.Env):
             distance_from_goal < self.threshold_distance
             and (abs(obs["offset_theta"][0]) < self.angular_threshold)
         )
-        # print("SUCCESS", is_success)
-        # print("OFFSET THEETA REACHES", obs["offset_theta"][0] < self.angular_threshold)
-        # print("offset theta", obs["offset_theta"][0], "self thereshold", self.angular_threshold)
+
         terminated = bool(terminated or is_success)
 
         if is_success and self.trajectory is not None:
@@ -289,7 +284,7 @@ class BlueRov(gym.Env):
         z = np.cos(phi)
 
         heading_theta = np.random.uniform(
-            0, np.pi
+            -np.pi / 2, np.pi / 2
         )  # do not ever make the vehicle move more than 180 degrees
 
         return np.array([x, y, z, heading_theta])

@@ -15,7 +15,12 @@ def evaluate(
     model_path: str, num_episodes: int, model_type: str, normalization_file: str = None
 ):
     env0 = DummyVecEnv(
-        [lambda: gym.make("BlueRov-v0", render_mode="human", trajectory_file=None)]
+        [
+            lambda: gym.wrappers.TimeLimit(
+                gym.make("BlueRov-v0", render_mode="human", trajectory_file=None),
+                max_episode_steps=100,
+            )
+        ]
     )
     env = VecNormalize.load(normalization_file, env0)
     env.training = False
@@ -31,7 +36,6 @@ def evaluate(
     episode_rewards = []
     success_count = 0
 
-    
     for ep in range(1, num_episodes + 1):
         obs = env.reset()
         done = False
