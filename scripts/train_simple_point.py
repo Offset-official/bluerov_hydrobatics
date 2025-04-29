@@ -16,6 +16,8 @@ import bluerov2_gym.envs
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
+MAX_EPISODE_STEPS = 100
+
 
 @app.command()
 def train(
@@ -45,10 +47,12 @@ def train(
 
     eval_vec_env = VecNormalize(
         make_vec_env(
-            "BlueRov-v0",
+            lambda: gym.wrappers.TimeLimit(
+                gym.make("BlueRov-v0", render_mode=render_mode),
+                max_episode_steps=MAX_EPISODE_STEPS,
+            ),
             n_envs=1,
             seed=42,
-            env_kwargs={"render_mode": render_mode},
         ),
         training=False,
     )
@@ -69,10 +73,12 @@ def train(
 
     vec_env = VecNormalize(
         make_vec_env(
-            "BlueRov-v0",
+            lambda: gym.wrappers.TimeLimit(
+                gym.make("BlueRov-v0", render_mode=render_mode),
+                max_episode_steps=MAX_EPISODE_STEPS,
+            ),
             n_envs=n_envs,
             seed=42,
-            env_kwargs={"render_mode": None},
             vec_env_cls=SubprocVecEnv,
         )
     )
@@ -93,7 +99,7 @@ def train(
             device="cpu",
             tensorboard_log="logs",
         )
-    if model_type == "A2C":
+    elif model_type == "A2C":
         model = A2C(
             "MultiInputPolicy",
             vec_env,
