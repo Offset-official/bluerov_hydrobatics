@@ -48,7 +48,7 @@ class BlueRov(gym.Env):
         self.threshold_distance = 0.1
         self.angular_threshold = 0.1
 
-        self.distance_to_goal = 0.0
+        self.distance_to_goal_from_start = 0.0
 
         init_x = 0.0
         init_y = 0.0
@@ -64,10 +64,12 @@ class BlueRov(gym.Env):
             init_z = self.trajectory[0, 2]
             init_theta = self.trajectory[0, 3]
             self.goal_point = self.trajectory[1, :]
-            self.distance_to_goal = self.compute_distance_from_goal()
+            self.distance_to_goal_from_start = self.compute_distance_from_goal()
         else:
             self.trajectory = None
-            self.goal_point, self.distance_to_goal = self.compute_random_goal_point()
+            self.goal_point, self.distance_to_goal_from_start = (
+                self.compute_random_goal_point()
+            )
         self.waypoint_idx = 1
         self.reward_fn = SinglePointReward(
             threshold=self.threshold_distance, angular_threshold=self.angular_threshold
@@ -133,7 +135,9 @@ class BlueRov(gym.Env):
             self.waypoint_idx = 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
         else:
-            self.goal_point = self.compute_random_goal_point()
+            self.goal_point, self.distance_to_goal_from_start = (
+                self.compute_random_goal_point()
+            )
 
         self.disturbance_dist = self.dynamics.reset()
 
@@ -173,7 +177,7 @@ class BlueRov(gym.Env):
 
         distance_from_goal = self.compute_distance_from_goal()
 
-        if distance_from_goal > self.distance_to_goal + 0.5:
+        if distance_from_goal > self.distance_to_goal_from_start + 0.5:
             terminated = True
 
         action_magnitude = self.compute_action_magnitude(action)
@@ -188,7 +192,7 @@ class BlueRov(gym.Env):
         if is_success and self.trajectory is not None:
             self.waypoint_idx += 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
-            self.distance_to_goal = self.compute_distance_from_goal()
+            self.distance_to_goal_from_start = self.compute_distance_from_goal()
             terminated = False
 
         reward_tuple = self.reward_fn.get_reward(
