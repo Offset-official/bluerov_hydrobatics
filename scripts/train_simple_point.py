@@ -2,6 +2,7 @@ import time
 from pathlib import Path
 import gymnasium as gym
 import bluerov2_gym
+from bluerov2_gym.training.callbacks import SaveVectorNormalizationCallback
 import typer
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
@@ -46,12 +47,16 @@ def train(
             n_envs=1,
             seed=42,
             env_kwargs={"render_mode": render_mode},
-        )
+        ),
+        training=False,
     )
 
     eval_callback = EvalCallback(
         eval_vec_env,
         best_model_save_path=str(output_dir / "best_checkpoints"),
+        callback_on_new_best=SaveVectorNormalizationCallback(
+            verbose=0, save_path=str(output_dir / "best_checkpoints")
+        ),
         log_path="./logs/",
         verbose=1,
         eval_freq=1000,
