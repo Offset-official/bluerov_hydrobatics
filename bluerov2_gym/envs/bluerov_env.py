@@ -66,7 +66,9 @@ class BlueRov(gym.Env):
             self.trajectory = None
             self.goal_point = self.compute_random_goal_point()
         self.waypoint_idx = 1
-        self.reward_fn = SinglePointReward(threshold=self.threshold_distance, angular_threshold=self.angular_threshold)
+        self.reward_fn = SinglePointReward(
+            threshold=self.threshold_distance, angular_threshold=self.angular_threshold
+        )
 
         self.state = {
             "x": init_x,  # x position (m)
@@ -136,7 +138,7 @@ class BlueRov(gym.Env):
 
         info = {
             "distance_from_goal": self.compute_distance_from_goal(),
-            "current_heading": self.state["theta"]
+            "current_heading": self.state["theta"],
         }
 
         return obs, info
@@ -151,7 +153,7 @@ class BlueRov(gym.Env):
         Returns:
             tuple: (observation, reward, terminated, truncated, info)
         """
-        self.dynamics.step(self.state, action) 
+        self.dynamics.step(self.state, action)
 
         obs = self.compute_observation()
 
@@ -171,13 +173,15 @@ class BlueRov(gym.Env):
 
         distance_from_goal = self.compute_distance_from_goal()
 
-        if (distance_from_goal > 1.5):
+        if distance_from_goal > 1.5:
             terminated = True
 
         action_magnitude = self.compute_action_magnitude(action)
 
-        is_success = bool(distance_from_goal < self.threshold_distance and 
-                        (obs["offset_theta"][0] < self.angular_threshold)) 
+        is_success = bool(
+            distance_from_goal < self.threshold_distance
+            and (obs["offset_theta"][0] < self.angular_threshold)
+        )
         terminated = bool(terminated or is_success)
 
         if is_success and self.trajectory is not None:
@@ -197,7 +201,7 @@ class BlueRov(gym.Env):
             "action_magnitude": action_magnitude,
             "is_success": is_success,
             "angle_offset": abs(obs["offset_theta"][0]),
-            "current_heading":self.state["theta"]
+            "current_heading": self.state["theta"],
         }
 
         if self.render_mode == "human":
@@ -226,7 +230,7 @@ class BlueRov(gym.Env):
         Update the visualization with the current state.
         """
         self.renderer.step_sim(self.state)
-        
+
         if self.trajectory is not None:
             self.renderer.visualize_waypoints(
                 self.trajectory,

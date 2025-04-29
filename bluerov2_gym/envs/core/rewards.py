@@ -42,7 +42,7 @@ class SinglePointReward:
         if distance_to_goal < self.threshold and theta_offset < self.angular_threshold:
             distance_to_goal = 0.0
             r_completion = 1000
-        
+
         r_pos = np.exp(-(distance_to_goal**2))
         r_angle = np.exp(-(theta_offset**2))
         r_action = 0.5 * np.exp(-(action_magnitude))
