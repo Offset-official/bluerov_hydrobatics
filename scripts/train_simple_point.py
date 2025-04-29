@@ -91,11 +91,26 @@ def train(
     #     tensorboard_log="logs",
     # )
 
-    model = A2C(
+    # model = A2C(
+    #     "MultiInputPolicy",
+    #     vec_env,
+    #     verbose=0,
+    #     n_steps=n_steps,
+    #     device="cpu",
+    #     tensorboard_log="logs",
+    # )
+
+    model = SAC(
         "MultiInputPolicy",
         vec_env,
         verbose=0,
-        n_steps=n_steps,
+        learning_starts=1000,
+        learning_rate=0.001,
+        buffer_size=10000,
+        policy_kwargs=dict(
+            net_arch=[256, 256],
+        ),
+        batch_size=64,
         device="cpu",
         tensorboard_log="logs",
     )
