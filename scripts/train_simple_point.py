@@ -4,7 +4,7 @@ import gymnasium as gym
 import bluerov2_gym
 from bluerov2_gym.training.callbacks import SaveVectorNormalizationCallback
 import typer
-from stable_baselines3 import PPO, SAC
+from stable_baselines3 import PPO, SAC, A2C
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.env_checker import check_env
@@ -19,7 +19,7 @@ app = typer.Typer(pretty_exceptions_enable=False)
 @app.command()
 def train(
     output_dir: str = "./trained_models",
-    total_timesteps: int = 10000,
+    total_timesteps: int = 1000000,
     n_steps: int = 8,
     n_envs: int = 8,
     model_name: str = "bluerov_simplepoint",
@@ -34,12 +34,12 @@ def train(
     print(f"Model will be saved to: {model_path}")
     print(f"Using {n_envs} parallel environments")
 
-    # checkpoint_callback = CheckpointCallback(
-    #     save_freq=1000,
-    #     save_path=str(output_dir / "checkpoints"),
-    #     name_prefix=model_name,
-    #     verbose=1,
-    # )
+    checkpoint_callback = CheckpointCallback(
+        save_freq=10000,
+        save_path=str(output_dir / "checkpoints"),
+        name_prefix=model_name,
+        verbose=1,
+    )
 
     eval_vec_env = VecNormalize(
         make_vec_env(
@@ -59,7 +59,7 @@ def train(
         ),
         log_path="./logs/",
         verbose=1,
-        eval_freq=1000,
+        eval_freq=10000,
         deterministic=True,
         n_eval_episodes=20,
         render=False,
@@ -81,15 +81,25 @@ def train(
 
     print("Environment check passed successfully ✅")
 
-    model = PPO(
+    # model = PPO(
+    #     "MultiInputPolicy",
+    #     vec_env,
+    #     verbose=0,
+    #     n_steps=n_steps,
+    #     batch_size=64,
+    #     device="cpu",
+    #     tensorboard_log="logs",
+    # )
+
+    model = A2C(
         "MultiInputPolicy",
         vec_env,
         verbose=0,
         n_steps=n_steps,
-        batch_size=64,
         device="cpu",
         tensorboard_log="logs",
     )
+
 
     start_time = time.time()
 

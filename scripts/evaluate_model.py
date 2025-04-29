@@ -31,13 +31,14 @@ def evaluate(
     episode_rewards = []
     success_count = 0
 
+    
     for ep in range(1, num_episodes + 1):
         obs = env.reset()
         done = False
         total_reward = 0.0
         success = False
-        env.render()
         distances_from_goal = []
+        env.render()
         time.sleep(5)
         current_ep_rewards = []
         current_ep_reward_tuples = []
@@ -45,8 +46,8 @@ def evaluate(
         while not done:
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, dones, info = env.step(action)
-            total_reward += reward[0]
-            current_ep_rewards.append(reward)
+            total_reward += sum(info[0]["reward_tuple"])
+            current_ep_rewards.append(sum(info[0]["reward_tuple"]))
             current_ep_reward_tuples.append(info[0]["reward_tuple"])
 
             distances_from_goal.append(info[0]["distance_from_goal"])
@@ -61,7 +62,7 @@ def evaluate(
         episode_rewards.append(total_reward)
         success_count += success
         print(
-            f"Episode {ep}/{num_episodes} — Reward: {total_reward:.2f}  Success: {success}"
+            f"Episode {ep}/{num_episodes} — Reward: {total_reward:.2f}  Success: {success} Episode Length: {len(distances_from_goal)}"
         )
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
 
