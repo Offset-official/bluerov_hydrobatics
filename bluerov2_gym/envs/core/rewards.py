@@ -36,7 +36,13 @@ class SinglePointReward:
         self.angular_threshold = angular_threshold
 
     def get_reward(
-        self, distance_to_goal, theta_offset, action_magnitude, number_of_steps, dot_to_goal=0.0
+        self,
+        distance_to_goal,
+        theta_offset,
+        action_magnitude,
+        number_of_steps,
+        dot_to_goal=0.0,
+        last_distance_to_goal=0.0,
     ):
         r_completion = 0
         r_number_of_steps = 0
@@ -50,9 +56,9 @@ class SinglePointReward:
         r_pos = np.exp(-(distance_to_goal**2))
         r_angle = np.exp(-(theta_offset**2))
         r_action = 0
-        r_number_of_steps = -10
+        r_diff_distance_from_goal = 5 * (last_distance_to_goal - distance_to_goal)
 
-        return np.array([r_pos, r_angle, r_number_of_steps, r_completion])
+        return np.array([r_pos, r_angle, r_diff_distance_from_goal, r_completion])
 
 
 class WayPointReward:

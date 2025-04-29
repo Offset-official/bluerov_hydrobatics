@@ -137,6 +137,8 @@ class BlueRov(gym.Env):
 
         self.number_of_steps = 0
 
+        self.distances_from_goal = []
+
         if self.trajectory is not None:
             self.waypoint_idx = 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
@@ -144,6 +146,7 @@ class BlueRov(gym.Env):
             self.goal_point, self.distance_to_goal_from_start = (
                 self.compute_random_goal_point()
             )
+        self.distances_from_goal.append(self.distance_to_goal_from_start)
 
         self.disturbance_dist = self.dynamics.reset()
 
@@ -175,18 +178,20 @@ class BlueRov(gym.Env):
         terminated = False
         truncated = False
 
-        # # Check boundary conditions for termination
-        # if abs(self.state["z"]) > 10.0:  # Depth limit
-        #     terminated = True
-        # if (
-        #     abs(self.state["x"]) > 15.0 or abs(self.state["y"]) > 15.0
-        # ):  # Horizontal boundaries
-        #     terminated = True
+        # Check boundary conditions for termination
+        if abs(self.state["z"]) > 10.0:  # Depth limit
+            terminated = True
+        if (
+            abs(self.state["x"]) > 15.0 or abs(self.state["y"]) > 15.0
+        ):  # Horizontal boundaries
+            terminated = True
 
         distance_from_goal = self.compute_distance_from_goal()
 
-        # if distance_from_goal > self.distance_to_goal_from_start + 0.5:
-        #     terminated = True
+        self.distances_from_goal.append(distance_from_goal)
+
+        if distance_from_goal > self.distance_to_goal_from_start + 0.5:
+            terminated = True
 
         action_magnitude = self.compute_action_magnitude(action)
 
@@ -204,17 +209,21 @@ class BlueRov(gym.Env):
             terminated = False
 
         # Compute dot_to_goal for straight-line motion encouragement
-        to_goal = np.array([
-            self.goal_point[0] - self.state["x"],
-            self.goal_point[1] - self.state["y"],
-            self.goal_point[2] - self.state["z"],
-        ])
+        to_goal = np.array(
+            [
+                self.goal_point[0] - self.state["x"],
+                self.goal_point[1] - self.state["y"],
+                self.goal_point[2] - self.state["z"],
+            ]
+        )
         unit_to_goal = to_goal / (np.linalg.norm(to_goal) + 1e-8)
-        velocity = np.array([
-            self.state["vx"],
-            self.state["vy"],
-            self.state["vz"],
-        ])
+        velocity = np.array(
+            [
+                self.state["vx"],
+                self.state["vy"],
+                self.state["vz"],
+            ]
+        )
         dot_to_goal = np.dot(unit_to_goal, velocity)
 
         reward_tuple = self.reward_fn.get_reward(
@@ -223,6 +232,7 @@ class BlueRov(gym.Env):
             action_magnitude,
             self.number_of_steps,
             dot_to_goal,
+            distance_from_goal[-2],
         )
         total_reward = sum(reward_tuple)
 
