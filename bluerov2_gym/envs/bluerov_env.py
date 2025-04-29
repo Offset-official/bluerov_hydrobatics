@@ -177,19 +177,20 @@ class BlueRov(gym.Env):
             terminated = True
 
         action_magnitude = self.compute_action_magnitude(action)
-        
+
         is_success = bool(
             distance_from_goal < self.threshold_distance
             and (abs(obs["offset_theta"][0]) < self.angular_threshold)
         )
         # print("SUCCESS", is_success)
-        # print("OFFSET THEETA REACHES", obs["offset_theta"][0] < self.angular_threshold) 
+        # print("OFFSET THEETA REACHES", obs["offset_theta"][0] < self.angular_threshold)
         # print("offset theta", obs["offset_theta"][0], "self thereshold", self.angular_threshold)
         terminated = bool(terminated or is_success)
 
         if is_success and self.trajectory is not None:
             self.waypoint_idx += 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
+            terminated = False
 
         reward_tuple = self.reward_fn.get_reward(
             distance_from_goal, obs["offset_theta"][0], action_magnitude
