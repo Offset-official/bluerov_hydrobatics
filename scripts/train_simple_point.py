@@ -16,7 +16,7 @@ import bluerov2_gym.envs
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
-MAX_EPISODE_STEPS = 100
+MAX_EPISODE_STEPS = 50
 
 
 @app.command()

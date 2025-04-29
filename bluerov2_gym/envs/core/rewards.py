@@ -50,11 +50,9 @@ class SinglePointReward:
         r_pos = np.exp(-(distance_to_goal**2))
         r_angle = np.exp(-(theta_offset**2))
         r_action = 0
+        r_number_of_steps = -10
 
-        # Add dot_to_goal as a reward bonus (scaled)
-        dot_bonus = 0.5 * dot_to_goal
-
-        return np.array([r_pos, r_angle, dot_bonus, r_completion])
+        return np.array([r_pos, r_angle, r_number_of_steps, r_completion])
 
 
 class WayPointReward:
