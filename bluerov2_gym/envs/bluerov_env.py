@@ -273,15 +273,16 @@ class BlueRov(gym.Env):
 
     def compute_random_goal_point(self):
         """
-        Generate a random point on the surface of a unit sphere around the origin.
+        Generate a random point anywhere within a sphere of radius R around the origin.
         """
-
+        R = 2
         theta = 2 * np.pi * random()
         phi = np.arccos(1 - 2 * random())
+        r = R * (random() ** (1 / 3))  # Cube root for uniform distribution in volume
 
-        x = np.sin(phi) * np.cos(theta)
-        y = np.sin(phi) * np.sin(theta)
-        z = np.cos(phi)
+        x = r * np.sin(phi) * np.cos(theta)
+        y = r * np.sin(phi) * np.sin(theta)
+        z = r * np.cos(phi)
 
         heading_theta = np.random.uniform(
             -np.pi / 2, np.pi / 2
