@@ -62,11 +62,6 @@ python scripts/visualize_trajectory.py my_square_trajectory.csv
 # Run PID controller with a trajectory file with max steps = 200000
 python ./scripts/main.py --algorithm pid --file ./trajectories/spiral.csv --max-steps 200000
 
-# Run manual control
-python ./scripts/main.py --algorithm manual
-
-
-python scripts/train_simple_point.py --model-type sac --total-timesteps 500000 --n-envs 4 --model-name mymodel
-
 python ./scripts/evaluate_waypoint_model.py --trajectory-file ./trajectories/spiral.csv --model-type a2c --model-path ./trained_models/best_model.zip --normalization-file ./trained_models/best_vector_norm.pkl
+
 ```
