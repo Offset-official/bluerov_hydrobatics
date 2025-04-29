@@ -64,7 +64,6 @@ class BlueRov(gym.Env):
             init_z = self.trajectory[0, 2]
             init_theta = self.trajectory[0, 3]
             self.goal_point = self.trajectory[1, :]
-            self.distance_to_goal_from_start = self.compute_distance_from_goal()
         else:
             self.trajectory = None
             self.goal_point, self.distance_to_goal_from_start = (
@@ -85,6 +84,9 @@ class BlueRov(gym.Env):
             "vz": 0.0,  # vertical velocity (m/s)
             "omega": 0.0,  # angular velocity (rad/s)
         }
+
+        if self.trajectory is not None:
+            self.distance_to_goal_from_start = self.compute_distance_from_goal()
 
         self.init_state = deepcopy(self.state)
 
