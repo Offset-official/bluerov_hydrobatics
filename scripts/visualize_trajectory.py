@@ -5,7 +5,8 @@ import typer
 import numpy as np
 from importlib import resources
 from typing import Optional
-
+import os
+import bluerov2_gym
 import meshcat
 import meshcat.geometry as g
 import meshcat.transformations as tf
@@ -78,7 +79,11 @@ class TrajectoryVisualizer:
             g.MeshLambertMaterial(
                 map=g.ImageTexture(
                     image=g.PngImage.from_file(
-                        "C:/Users/abhin/Downloads/Untitled.png",
+                        os.path.join(
+                            bluerov2_gym.__path__[0],
+                            "assets",
+                            "texture.png",
+                        )
                     )
                 )
             ),
