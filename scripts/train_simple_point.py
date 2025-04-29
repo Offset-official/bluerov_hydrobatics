@@ -105,6 +105,7 @@ def train(
             vec_env,
             verbose=0,
             n_steps=n_steps,
+            ent_coef=0.01,
             device="cpu",
             tensorboard_log="logs",
         )

@@ -72,13 +72,7 @@ def evaluate(
 
         if trajectory_file is not None:
             # Unwrap to get the BlueRov environment instance robustly
-            base_env = env
-            if hasattr(base_env, "venv"):
-                base_env = base_env.venv
-            if hasattr(base_env, "envs"):
-                base_env = base_env.envs[0]
-            if hasattr(base_env, "env"):
-                base_env = base_env.env
+            base_env = env.venv
             waypoint_idx = getattr(base_env, "waypoint_idx", None)
             if waypoint_idx is not None and waypoint_idx >= num_waypoints:
                 success = True

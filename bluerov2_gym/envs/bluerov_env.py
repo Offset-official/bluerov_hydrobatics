@@ -203,14 +203,32 @@ class BlueRov(gym.Env):
             self.distance_to_goal_from_start = self.compute_distance_from_goal()
             terminated = False
 
+        # Compute dot_to_goal for straight-line motion encouragement
+        to_goal = np.array([
+            self.goal_point[0] - self.state["x"],
+            self.goal_point[1] - self.state["y"],
+            self.goal_point[2] - self.state["z"],
+        ])
+        unit_to_goal = to_goal / (np.linalg.norm(to_goal) + 1e-8)
+        velocity = np.array([
+            self.state["vx"],
+            self.state["vy"],
+            self.state["vz"],
+        ])
+        dot_to_goal = np.dot(unit_to_goal, velocity)
+
         reward_tuple = self.reward_fn.get_reward(
             distance_from_goal,
             obs["offset_theta"][0],
             action_magnitude,
             self.number_of_steps,
+            dot_to_goal,
         )
 
-        total_reward = reward_tuple[0]
+        total_reward = sum(reward_tuple)
+
+        # print("Reward tuple:", reward_tuple)
+        # print("Total reward:", total_reward)
 
         info = {
             "distance_from_goal": distance_from_goal,
@@ -294,7 +312,7 @@ class BlueRov(gym.Env):
         """
         Generate a random point anywhere within a sphere of radius R around the origin.
         """
-        R = 2
+        R = 1
         theta = 2 * np.pi * random()
         phi = np.arccos(1 - 2 * random())
         r = R * (random() ** (1 / 3))  # Cube root for uniform distribution in volume
