@@ -4,11 +4,12 @@ import gymnasium as gym
 import bluerov2_gym
 from bluerov2_gym.training.callbacks import SaveVectorNormalizationCallback
 import typer
-from stable_baselines3 import PPO, SAC, A2C
+from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.vec_env import VecNormalize, SubprocVecEnv
+from typing_extensions import Annotated
 import rich
 
 import bluerov2_gym.envs
@@ -18,6 +19,7 @@ app = typer.Typer(pretty_exceptions_enable=False)
 
 @app.command()
 def train(
+    model_type: Annotated[str, typer.Argument(help="Model type: A2C, PPO")],
     output_dir: str = "./trained_models",
     total_timesteps: int = 1000000,
     n_steps: int = 8,
@@ -81,24 +83,27 @@ def train(
 
     print("Environment check passed successfully ✅")
 
-    # model = PPO(
-    #     "MultiInputPolicy",
-    #     vec_env,
-    #     verbose=0,
-    #     n_steps=n_steps,
-    #     batch_size=64,
-    #     device="cpu",
-    #     tensorboard_log="logs",
-    # )
-
-    model = A2C(
-        "MultiInputPolicy",
-        vec_env,
-        verbose=0,
-        n_steps=n_steps,
-        device="cpu",
-        tensorboard_log="logs",
-    )
+    if model_type == "PPO":
+        model = PPO(
+            "MultiInputPolicy",
+            vec_env,
+            verbose=0,
+            n_steps=n_steps,
+            batch_size=64,
+            device="cpu",
+            tensorboard_log="logs",
+        )
+    if model_type == "A2C":
+        model = A2C(
+            "MultiInputPolicy",
+            vec_env,
+            verbose=0,
+            n_steps=n_steps,
+            device="cpu",
+            tensorboard_log="logs",
+        )
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}")
 
     start_time = time.time()
 
@@ -110,8 +115,6 @@ def train(
 
     training_time = time.time() - start_time
     print(f"Training completed in {training_time:.2f} seconds")
-
-    return model
 
 
 if __name__ == "__main__":

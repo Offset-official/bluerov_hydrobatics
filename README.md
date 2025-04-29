@@ -57,14 +57,15 @@ python scripts/visualize_trajectory.py my_square_trajectory.csv
 
 ### Main Algorithm Runner
 
-
 ```bash
 # Run PID controller with a trajectory file with max steps = 200000
 python ./scripts/main.py --algorithm pid --file ./trajectories/spiral.csv --max-steps 200000
 
-# Run manual control
-python ./scripts/main.py --algorithm manual
-
-
 python scripts/train_simple_point.py --model-type sac --total-timesteps 500000 --n-envs 4 --model-name mymodel
+```
+
+### Training the Agent
+
+```bash
+python scripts/train_simple_point.py PPO --n-envs 8 
 ```
