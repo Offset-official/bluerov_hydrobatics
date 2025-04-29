@@ -174,7 +174,7 @@ def generate_straight_line_trajectory(num_points=100, end_x=10.0):
         headings[i] = calculate_heading(p1, p2)
     headings[-1] = headings[-2]  # Last heading same as second last
 
-    return np.column_stack((x, y, z))
+    return np.column_stack((x, y, z, headings))
 
 
 def save_trajectory_to_csv(trajectory, filepath):

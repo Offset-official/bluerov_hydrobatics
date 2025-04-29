@@ -1,6 +1,4 @@
 import numpy as np
-import csv
-from pathlib import Path
 
 
 class Reward:
@@ -39,7 +37,10 @@ class SinglePointReward:
 
     def get_reward(self, distance_to_goal, theta_offset, action_magnitude):
         r_completion = 0
-        if distance_to_goal < self.threshold and abs(theta_offset) < self.angular_threshold:
+        if (
+            distance_to_goal < self.threshold
+            and abs(theta_offset) < self.angular_threshold
+        ):
             distance_to_goal = 0.0
             r_completion = 1000
 
