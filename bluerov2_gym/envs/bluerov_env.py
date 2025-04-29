@@ -210,7 +210,7 @@ class BlueRov(gym.Env):
             self.number_of_steps,
         )
 
-        total_reward = np.sum(reward_tuple)
+        total_reward = reward_tuple[0]
 
         info = {
             "distance_from_goal": distance_from_goal,
