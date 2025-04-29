@@ -177,11 +177,13 @@ class BlueRov(gym.Env):
             terminated = True
 
         action_magnitude = self.compute_action_magnitude(action)
-
+        
         is_success = bool(
             distance_from_goal < self.threshold_distance
             and (obs["offset_theta"][0] < self.angular_threshold)
         )
+        print("SUCCESS", is_success)
+        prinnt("OFFSET THEETA REACHES", obs["offset_theta"][0] < self.angular_threshold) 
         terminated = bool(terminated or is_success)
 
         if is_success and self.trajectory is not None:
