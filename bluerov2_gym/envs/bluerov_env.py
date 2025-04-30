@@ -420,20 +420,20 @@ class BlueRov(gym.Env):
         """
 
  
-        # Parse the trajectory string into a list of floats
-        trajectory = [
-            [float(coord) for coord in line.split(",")]
-            for line in spiral_traj.strip().split("\n")
-        ]
-        trajectory = np.array(trajectory)
-        # take random 2 adjacent points
-        idx = np.random.randint(0, trajectory.shape[0] - 1)
-        p1 = trajectory[idx]
-        p2 = trajectory[idx + 1]
-        x = p2[0] - p1[0]
-        y = p2[1] - p1[1]
-        z = p2[2] - p1[2]
-        heading_theta = p1[]
+        # # Parse the trajectory string into a list of floats
+        # trajectory = [
+        #     [float(coord) for coord in line.split(",")]
+        #     for line in spiral_traj.strip().split("\n")
+        # ]
+        # trajectory = np.array(trajectory)
+        # # take random 2 adjacent points
+        # idx = np.random.randint(0, trajectory.shape[0] - 1)
+        # p1 = trajectory[idx]
+        # p2 = trajectory[idx + 1]
+        # x = p2[0] - p1[0]
+        # y = p2[1] - p1[1]
+        # z = p2[2] - p1[2]
+        # heading_theta = p1[]
         # R = 2
         # theta = 2 * np.pi * random()
         # phi = np.arccos(1 - 2 * random())
@@ -447,4 +447,5 @@ class BlueRov(gym.Env):
         #     -np.pi / 2, np.pi / 2
         # )  # do not ever make the vehicle move more than 180 degrees
 
-        return np.array([x, y, z, heading_theta]), r
+        # return np.array([x, y, z, heading_theta]), r
+        pass

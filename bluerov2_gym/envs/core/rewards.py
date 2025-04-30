@@ -49,12 +49,10 @@ def get_reward(self, distance_to_goal, theta_offset, action_magnitude, number_of
     r_angle = np.exp(-(theta_offset**2))
 
     # Step penalty to encourage faster completion
-    r_step_penalty = -0.1  # Adjust this value as needed
+    r_step_penalty = 0 # Adjust this value as needed
 
     # Action magnitude penalty to discourage unnecessary movements
-    r_action_penalty = -0.01 * np.linalg.norm(
-        action_magnitude
-    )  # Adjust this value as needed
+    r_action_penalty = 0
 
     # Total reward
     total_reward = r_pos + r_angle + r_step_penalty + r_action_penalty + r_completion
