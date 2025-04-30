@@ -43,6 +43,7 @@ class SinglePointReward:
         number_of_steps,
         dot_to_goal=0.0,
         last_distance_to_goal=0.0,
+        last_theta_offset=0.0,
         offset_x=0.0,
         offset_y=0.0,
         offset_z=0.0,
@@ -50,30 +51,21 @@ class SinglePointReward:
         offset_y_last=0.0,
         offset_z_last=0.0,
     ):
-        r_completion = 0
-        reward_tuple = np.array([])
-        r_number_of_steps = 0
-        if (
-            distance_to_goal < self.threshold
-            and abs(theta_offset) < self.angular_threshold
-        ):
-            distance_to_goal = 0.0
-            r_completion = 1000
+        k_d, k_ang = 100.0, 5.0        # tune freely, start same order of magnitude
+        r_progress      = k_d   * -(distance_to_goal - last_distance_to_goal)
+        r_angle_prog    = k_ang * -(abs(theta_offset) - abs(last_theta_offset))
 
-        r_pos = np.exp(-(distance_to_goal**2))
-        # r_angle = np.exp(-(theta_offset**2))
-        # r_action = 0
-        # r_diff_distance_from_goal = 10 * (last_distance_to_goal - distance_to_goal) ** 3
-        # if (
-        #     abs(offset_x) < abs(offset_x_last)
-        #     and abs(offset_y) < abs(offset_y_last)
-        #     and abs(offset_z) < abs(offset_z_last)
-        # ):
-        #     offset_reward = 50
-        # else:
-        #     offset_reward = -50
-        total_reward = r_pos + r_completion - number_of_steps
-        return (total_reward, reward_tuple)
+        # 2.  Small time penalty to encourage short paths
+        r_step = -1.0                  # −1 each step
+
+        # 3.  Big terminal bonus
+        r_done = 0.0
+        
+        if distance_to_goal < self.threshold and abs(theta_offset) < self.angular_threshold:
+            r_done = 1_000.0           # 10³ not 10⁴ so gradient scales are similar
+        r_pos = -(distance_to_goal)
+        total_reward = r_progress + r_angle_prog + r_step + r_done + r_pos
+        return total_reward, (r_progress, r_angle_prog, r_step, r_done)
 
 
 class WayPointReward:
