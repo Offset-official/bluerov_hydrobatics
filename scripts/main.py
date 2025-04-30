@@ -7,12 +7,16 @@ import meshcat
 import meshcat.geometry as g
 import meshcat.transformations as tf
 import matplotlib.pyplot as plt
+<<<<<<< HEAD
 
 from pathlib import Path
 import bluerov2_gym  # This import will automatically register the environment
 from gymnasium import spaces   # add with other imports
 # Add imports for Stable Baselines
 from stable_baselines3 import PPO, SAC, TD3, A2C
+=======
+import bluerov2_gym  # This import will automatically register the environment
+>>>>>>> b190b04c2e6505bd4ed6aa016bf6d85d0bf84167
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 
@@ -67,17 +71,16 @@ def load_trajectory_from_csv(file_path):
         reader = csv.reader(f)
         header = next(reader)  # Skip header row
 
-        # Verify the CSV format
-        if header != ["x", "y", "z"]:
-            print(
-                f"Warning: CSV header {header} doesn't match expected format ['x', 'y', 'z']"
-            )
-
         for row in reader:
             if len(row) >= 3:
                 try:
-                    x, y, z = float(row[0]), float(row[1]), float(row[2])
-                    waypoints.append([x, y, z])
+                    x, y, z, theta = (
+                        float(row[0]),
+                        float(row[1]),
+                        float(row[2]),
+                        float(row[3]),
+                    )
+                    waypoints.append([x, y, z, theta])
                 except ValueError:
                     print(f"Warning: Skipping invalid row {row}")
 
@@ -95,75 +98,6 @@ def calculate_heading(p1, p2):
     return np.arctan2(dy, dx)
 
 
-def visualize_trajectory(vis, trajectory):
-    """Visualize trajectory as points and lines in Meshcat"""
-    points = np.array(trajectory).reshape(-1, 3)
-
-    if len(points) > 1:
-        # Add white markers for each waypoint
-        for i, point in enumerate(points):
-            # Special markers for start and end points
-            if i == 0:
-                # Start marker (green)
-                vis["markers/start"].set_object(
-                    g.Sphere(0.2), g.MeshPhongMaterial(color=0x00FF00)
-                )
-                vis["markers/start"].set_transform(tf.translation_matrix(point))
-            elif i == len(points) - 1:
-                # End marker (red)
-                vis["markers/end"].set_object(
-                    g.Sphere(0.2), g.MeshPhongMaterial(color=0xFF0000)
-                )
-                vis["markers/end"].set_transform(tf.translation_matrix(point))
-            else:
-                # Small white marker for intermediate waypoints
-                vis[f"markers/waypoint_{i}"].set_object(
-                    g.Sphere(0.1), g.MeshPhongMaterial(color=0xFFFFFF)
-                )
-                vis[f"markers/waypoint_{i}"].set_transform(tf.translation_matrix(point))
-
-        # Draw lines connecting waypoints
-        line_points = []
-        for i in range(len(points) - 1):
-            line_points.append(points[i])
-            line_points.append(points[i + 1])
-
-        line_vertices = np.array(line_points)
-        vis["trajectory/path"].set_object(
-            g.LineSegments(
-                g.PointsGeometry(position=line_vertices),
-                g.LineBasicMaterial(color=0xFFFF00),
-            )
-        )
-
-
-def set_initial_state(env, waypoints):
-    start_point = waypoints[0]
-    next_point = waypoints[1]
-    initial_heading = calculate_heading(start_point, next_point)
-    try:
-        env.unwrapped.state = {
-            "x": start_point[0],
-            "y": start_point[1],
-            "z": start_point[2],
-            "theta": initial_heading,
-            "vx": 0,
-            "vy": 0,
-            "vz": 0,
-            "omega": 0,
-        }
-
-        obs = {
-            k: np.array([v], dtype=np.float32) for k, v in env.unwrapped.state.items()
-        }
-        env.unwrapped.step_sim()
-        return obs
-    except AttributeError:
-        # If setting state directly doesn't work, just reset the environment
-        print("Warning: Could not set initial state directly, using default reset")
-        return env.reset()[0]
-
-
 def run_pid_controller(trajectory_file, max_steps=100000):
     # Define trajectory
     waypoints = load_trajectory_from_csv(trajectory_file)
@@ -172,25 +106,22 @@ def run_pid_controller(trajectory_file, max_steps=100000):
         return
 
     # Create the environment with rendering enabled and increased time limit
-    env = gym.make("BlueRov-v0", render_mode="human", max_episode_steps=max_steps)
+    env = gym.make(
+        "BlueRov-v0",
+        render_mode="human",
+        trajectory_file=trajectory_file,
+        max_episode_steps=max_steps,
+    )
 
-    env.reset()
-    env.render()
+    base_env = env.unwrapped
 
-    # Set initial state based on trajectory
-    obs = set_initial_state(env, waypoints)
-
-    # Access the visualizer
-    vis = env.unwrapped.renderer.vis
-
-    # Visualize the trajectory
-    visualize_trajectory(vis, waypoints)
+    exit()
 
     # Initialize PID controllers with tuned parameters
-    pid_x = PIDController(kp=1.2, ki=0.05, kd=0.3)
-    pid_y = PIDController(kp=1.2, ki=0.05, kd=0.3)
-    pid_z = PIDController(kp=1.5, ki=0.1, kd=0.4)
-    pid_heading = PIDController(kp=2.0, ki=0.1, kd=0.5)
+    pid_x = PIDController(kp=1.0, ki=0.0, kd=0.0)
+    pid_y = PIDController(kp=1.0, ki=0.0, kd=0.0)
+    pid_z = PIDController(kp=1.0, ki=0.0, kd=0.0)
+    pid_heading = PIDController(kp=1.0, ki=0.0, kd=0.0)
 
     # Reset all controllers
     pid_x.reset()
@@ -198,51 +129,39 @@ def run_pid_controller(trajectory_file, max_steps=100000):
     pid_z.reset()
     pid_heading.reset()
 
-    # Time step
     dt = 0.1
-
-    # Proximity threshold to consider a waypoint reached
-    proximity_threshold = 0.3
-
-    # Current waypoint index (start at 1 since we're already at waypoint 0)
+    proximity_threshold = 0.1
     current_waypoint_idx = 1
-
-    # Main control loop
     step_count = 0
 
     print(f"\nStarting trajectory tracking with {len(waypoints)} waypoints")
     print(
-        f"Initial position: x={obs['x'][0]:.2f}, y={obs['y'][0]:.2f}, z={obs['z'][0]:.2f}"
+        f"Initial position: x={base_env.state['x']:.2f}, y={base_env.state['y']:.2f}, z={base_env.state['z']:.2f}"
     )
-    print(f"Initial heading: {obs['theta'][0]:.2f} rad")
+    print(f"Initial heading: {base_env.state['theta']:.2f} rad")
     print(f"\nWaiting for 5 seconds to stabilize the simulation...")
     time.sleep(5)
 
     while step_count < max_steps:
-        current_pos = np.array([obs["x"][0], obs["y"][0], obs["z"][0]])
-        current_heading = obs["theta"][0]
+        # Use true state for control
+        current_pos = np.array(
+            [base_env.state["x"], base_env.state["y"], base_env.state["z"]]
+        )
+        current_heading = base_env.state["theta"]
 
         target_waypoint = waypoints[current_waypoint_idx]
-
-        # For smoother motion, use the path direction rather than direct heading to target
-        if current_waypoint_idx < len(waypoints) - 1:
-            # Calculate heading from current waypoint to next waypoint
-            path_heading = calculate_heading(
-                waypoints[current_waypoint_idx], waypoints[current_waypoint_idx + 1]
-            )
-        else:
-            # For the last waypoint, just head directly to it
-            path_heading = calculate_heading(current_pos, target_waypoint)
+        target_pos = np.array(target_waypoint[:3])
+        target_theta = target_waypoint[3]
 
         # Calculate position errors
-        error_x = target_waypoint[0] - current_pos[0]
-        error_y = target_waypoint[1] - current_pos[1]
-        error_z = target_waypoint[2] - current_pos[2]
+        error_x = target_pos[0] - current_pos[0]
+        error_y = target_pos[1] - current_pos[1]
+        error_z = target_pos[2] - current_pos[2]
 
         # Calculate heading error (accounting for angle wrapping)
         error_heading = np.arctan2(
-            np.sin(path_heading - current_heading),
-            np.cos(path_heading - current_heading),
+            np.sin(target_theta - current_heading),
+            np.cos(target_theta - current_heading),
         )
 
         # Compute PID control outputs
@@ -273,15 +192,20 @@ def run_pid_controller(trajectory_file, max_steps=100000):
         )
 
         obs, reward, terminated, truncated, info = env.step(action)
-        env.unwrapped.step_sim()
+        print(f"Reward: {reward:.2f}")
 
         # Print status
-        distance_to_target = np.linalg.norm(current_pos - target_waypoint)
+        distance_to_target = np.linalg.norm(current_pos - target_pos)
+        heading_error_to_target = np.arctan2(
+            np.sin(target_theta - current_heading),
+            np.cos(target_theta - current_heading),
+        )
+
         print(
-            f"Step {step_count}: Position (x={obs['x'][0]:.2f}, y={obs['y'][0]:.2f}, z={obs['z'][0]:.2f})"
+            f"Step {step_count}: Position (x={base_env.state['x']:.2f}, y={base_env.state['y']:.2f}, z={base_env.state['z']:.2f})"
         )
         print(
-            f"Heading: {obs['theta'][0]:.2f} rad, Desired: {path_heading:.2f} rad, Error: {error_heading:.2f} rad"
+            f"Heading: {base_env.state['theta']:.2f} rad, Target: {target_theta:.2f} rad, Error: {heading_error_to_target:.2f} rad"
         )
         print(
             f"Current waypoint: {current_waypoint_idx}, Distance: {distance_to_target:.2f}"
@@ -291,7 +215,10 @@ def run_pid_controller(trajectory_file, max_steps=100000):
         )
 
         # Check if we've reached the current waypoint
-        if distance_to_target < proximity_threshold:
+        if (
+            distance_to_target < proximity_threshold
+            and abs(heading_error_to_target) < 0.1
+        ):
             print(f"Reached waypoint {current_waypoint_idx}")
             current_waypoint_idx += 1
 
@@ -310,123 +237,7 @@ def run_pid_controller(trajectory_file, max_steps=100000):
             break
 
         time.sleep(0.1)
-
         step_count += 1
-
-    env.close()
-
-
-def run_rl_agent(algorithm, model_path=None, trajectory_file=None, max_steps=100000):
-    """Run BlueROV with a specified RL algorithm"""
-    # Create the environment with rendering enabled and increased step limit
-    env = gym.make("BlueRov-v0", render_mode="human", max_episode_steps=max_steps)
-
-    # If trajectory file is provided, visualize it
-    if trajectory_file:
-        waypoints = load_trajectory_from_csv(trajectory_file)
-        if len(waypoints) > 0:
-            obs, _ = env.reset()
-            vis = env.unwrapped.renderer.vis
-            visualize_trajectory(vis, waypoints)
-
-            # Optionally, start from first waypoint
-            obs = set_initial_state(env, waypoints)
-        else:
-            obs, _ = env.reset()
-    else:
-        obs, _ = env.reset()
-
-    # Render initial state
-    env.render()
-
-    algorithm = algorithm.lower()
-
-    # Check if we're loading a pre-trained model
-    if model_path:
-        print(f"Loading pre-trained {algorithm.upper()} model from {model_path}")
-
-        # Load the appropriate model based on algorithm
-        if algorithm == "ppo":
-            model = PPO.load(model_path)
-        else:
-            print(f"Unknown algorithm: {algorithm}. Using PPO as default.")
-            model = PPO.load(model_path)
-
-        # Try to load normalization stats if available
-        try:
-            normalize_path = f"{model_path}_vec_normalize.pkl"
-            vec_env = DummyVecEnv(
-                [lambda: gym.make("BlueRov-v0", max_episode_steps=max_steps)]
-            )
-            vec_env = VecNormalize.load(normalize_path, vec_env)
-            vec_env.training = False
-            vec_env.norm_reward = False
-            use_normalization = True
-            print("Successfully loaded normalization stats")
-        except FileNotFoundError:
-            use_normalization = False
-            print("No normalization stats found, running without normalization")
-    else:
-        print(f"No model path provided for {algorithm}. Running with random actions.")
-        model = None
-        use_normalization = False
-
-    # Run episodes
-    episodes = 1  # Default to one episode
-
-    for episode in range(episodes):
-        episode_reward = 0
-        step_count = 0
-
-        print(f"\nStarting Episode {episode + 1}")
-
-        while step_count < max_steps:
-            if model:
-    # -------- 1) optional VecNormalize (only works for flat Box obs) --------
-                if use_normalization and isinstance(obs, np.ndarray):
-                    obs_in = vec_env.normalize_obs(obs)
-                else:
-                    obs_in = obs  # dict or already‑flat array
-
-                # -------- 2) match policy expectation -----------------------------------
-                #    – If the policy was trained on a Dict space, pass a Dict.
-                #    – If the policy was trained on a Box, pass a 1‑D array.
-                if isinstance(model.observation_space, gym.spaces.Box):
-                    # policy expects flat vector  ➜  ensure obs_in is flat
-                    if isinstance(obs_in, dict):
-                        obs_in = np.concatenate([obs_in[k] for k in sorted(obs_in.keys())])
-                else:
-                    # policy expects Dict  ➜  ensure obs_in is Dict
-                    # (nothing to do; it already is, otherwise training would not have worked)
-                    pass
-
-                # -------- 3) predict -----------------------------------------------------
-                action, _ = model.predict(obs_in, deterministic=True)
-
-            else:
-                action = np.random.uniform(-1, 1, 4)    
-
-            obs, reward, terminated, truncated, info = env.step(action)
-            episode_reward += reward
-
-            env.unwrapped.step_sim()
-
-            # Add a small delay to make the visualization viewable
-            time.sleep(0.1)
-
-            step_count += 1
-
-            # Print current state
-            print(
-                f"Step {step_count}: Position (x={obs['x'][0]:.2f}, y={obs['y'][0]:.2f}, z={obs['z'][0]:.2f})"
-            )
-            print(f"Current reward: {reward:.2f}")
-            print(f"Action: {action}")
-
-            if terminated or truncated:
-                print(f"Episode {episode + 1} finished after {step_count} steps")
-                print(f"Total reward: {episode_reward:.2f}")
-                break
 
     env.close()
 
@@ -484,7 +295,7 @@ def manual_control(max_steps=100000):
         env.unwrapped.step_sim()
 
         print(
-            f"Position: x={obs['x'][0]:.2f}, y={obs['y'][0]:.2f}, z={obs['z'][0]:.2f}"
+            f"Offset: x={obs['offset_x'][0]:.2f}, y={obs['offset_y'][0]:.2f}, z={obs['offset_z'][0]:.2f}"
         )
         print(f"Reward: {reward:.2f}")
 
@@ -503,6 +314,7 @@ class TrajectoryReward(gym.Wrapper):
         self.idx = 0
         self.proximity = proximity
 
+<<<<<<< HEAD
     def reset(self, **kwargs):
         self.idx = 0
         obs, info = self.env.reset(**kwargs)
@@ -659,6 +471,10 @@ def train_rl_agent(
     model.save(str(model_path))
     if normalize:
         env.save(str(vecnorm_path))
+=======
+def main():
+    parser = argparse.ArgumentParser(description="BlueROV2 Control and Simulation")
+>>>>>>> b190b04c2e6505bd4ed6aa016bf6d85d0bf84167
 
     env.close()
     eval_env.close()
@@ -678,12 +494,21 @@ def parse_args():
     # Common options
     parser.add_argument(
         "--algorithm",
+<<<<<<< HEAD
         type=str.lower,
         choices=list(ALGO_MAP.keys()) + ["pid", "manual"],
         default="pid",
         help="Control algorithm.",
     )
     parser.add_argument("--file", type=str, help="Path to trajectory CSV.")
+=======
+        type=str,
+        choices=["pid", "manual"],
+        default="pid",
+        help="Control algorithm to use (pid, ppo, sac, a2c, or manual)",
+    )
+
+>>>>>>> b190b04c2e6505bd4ed6aa016bf6d85d0bf84167
     parser.add_argument(
         "--max-steps",
         type=int,
@@ -694,6 +519,7 @@ def parse_args():
     # ---------- (run/evaluate) specific -------------------------------------
     parser.add_argument("--model", type=str, help="Path prefix of trained model.")
 
+<<<<<<< HEAD
     # ---------- (train) specific --------------------------------------------
     parser.add_argument(
         "--total-timesteps",
@@ -728,6 +554,10 @@ def main():
 
     # ------------------------------ PID / Manual ------------------------------
     if args.algorithm in {"pid"} and not args.train:
+=======
+    # Run the appropriate controller
+    if args.algorithm == "pid":
+>>>>>>> b190b04c2e6505bd4ed6aa016bf6d85d0bf84167
         if not args.file:
             print("Error: --algorithm pid requires --file path/to/trajectory.csv")
             return
@@ -735,6 +565,7 @@ def main():
         return
     if args.algorithm == "manual" and not args.train:
         manual_control(args.max_steps)
+<<<<<<< HEAD
         return
 
     # ------------------------------ TRAIN -------------------------------------
@@ -757,6 +588,8 @@ def main():
         trajectory_file=args.file,
         max_steps=args.max_steps,
     )
+=======
+>>>>>>> b190b04c2e6505bd4ed6aa016bf6d85d0bf84167
 
 
 if __name__ == "__main__":

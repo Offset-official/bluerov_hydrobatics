@@ -57,14 +57,25 @@ python scripts/visualize_trajectory.py my_square_trajectory.csv
 
 ### Main Algorithm Runner
 
-
 ```bash
 # Run PID controller with a trajectory file with max steps = 200000
 python ./scripts/main.py --algorithm pid --file ./trajectories/spiral.csv --max-steps 200000
 
-# Run PPO agent with a pre-trained model
-python ./scripts/main.py --algorithm ppo --model bluerov_ppo 
+python scripts/train_simple_point.py --model-type sac --total-timesteps 500000 --n-envs 4 --model-name mymodel
+```
 
-# Run manual control
-python ./scripts/main.py --algorithm manual
+### Training the Agent
+
+```bash
+python scripts/train_simple_point.py PPO --n-envs 8 
+```
+
+### Evaluating the Agent
+
+```bash
+python ./scripts/evaluate_waypoint_model.py --trajectory-file ./trajectories/spiral.csv --model-type a2c --model-path ./trained_models/best_checkpoints/best_model.zip --normalization-file ./trained_models/best_checkpoints/best_vector_norm.pkl
+
+python ./scripts/evaluate_waypoint_model.py --trajectory-file ./trajectories/spiral.csv --model-type a2c --model-path ./trained_models/checkpoints/bluerov_simplepoint_960000_steps.z
+ip --normalization-file ./trained_models/best_checkpoints/best_vector_norm.pkl
+
 ```
