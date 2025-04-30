@@ -72,7 +72,7 @@ class SinglePointReward:
         #     offset_reward = 50
         # else:
         #     offset_reward = -50
-        total_reward = r_pos + r_completion
+        total_reward = r_pos + r_completion - number_of_steps
         return (total_reward, reward_tuple)
 
 
