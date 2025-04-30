@@ -105,7 +105,7 @@ def train(
             vec_env,
             verbose=0,
             n_steps=n_steps,
-            device="cpu",
+            device="cuda",
             tensorboard_log="logs",
         )
     else:
