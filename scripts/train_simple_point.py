@@ -4,7 +4,7 @@ import gymnasium as gym
 import bluerov2_gym
 from bluerov2_gym.training.callbacks import SaveVectorNormalizationCallback
 import typer
-from stable_baselines3 import PPO, A2C
+from stable_baselines3 import PPO, A2C, DDPG
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.env_checker import check_env
@@ -16,7 +16,7 @@ import bluerov2_gym.envs
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
-MAX_EPISODE_STEPS = 50
+MAX_EPISODE_STEPS = 25
 
 
 @app.command()
@@ -65,7 +65,7 @@ def train(
         ),
         log_path="./logs/",
         verbose=1,
-        eval_freq=10000,
+        eval_freq=1000,
         deterministic=True,
         n_eval_episodes=20,
         render=False,
@@ -106,11 +106,18 @@ def train(
             verbose=0,
             n_steps=n_steps,
             ent_coef=0.01,
-            device="cpu",
+            device="cuda",
             tensorboard_log="logs",
         )
     else:
-        raise ValueError(f"Unsupported model type: {model_type}")
+        model = DDPG(
+            "MultiInputPolicy",
+            vec_env,
+            verbose=0,
+            batch_size=128,
+            device="cuda",
+            tensorboard_log="logs",
+        )
 
     start_time = time.time()
 
