@@ -73,6 +73,9 @@ python scripts/train_simple_point.py PPO --n-envs 8
 ### Evaluating the Agent
 
 ```bash
-python ./scripts/evaluate_waypoint_model.py --trajectory-file ./trajectories/spiral.csv --model-type a2c --model-path ./trained_models/best_model.zip --normalization-file ./trained_models/best_vector_norm.pkl
+python ./scripts/evaluate_waypoint_model.py --trajectory-file ./trajectories/spiral.csv --model-type a2c --model-path ./trained_models/best_checkpoints/best_model.zip --normalization-file ./trained_models/best_checkpoints/best_vector_norm.pkl
+
+python ./scripts/evaluate_waypoint_model.py --trajectory-file ./trajectories/spiral.csv --model-type a2c --model-path ./trained_models/checkpoints/bluerov_simplepoint_960000_steps.z
+ip --normalization-file ./trained_models/best_checkpoints/best_vector_norm.pkl
 
 ```
