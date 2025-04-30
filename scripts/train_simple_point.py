@@ -25,7 +25,7 @@ def train(
     output_dir: str = "./trained_models",
     total_timesteps: int = 1000000,
     n_steps: int = 8,
-    n_envs: int = 8,
+    n_envs: int = 16,
     model_name: str = "bluerov_simplepoint",
     render_mode: str = None,
 ):
@@ -65,7 +65,7 @@ def train(
         ),
         log_path="./logs/",
         verbose=1,
-        eval_freq=1000,
+        eval_freq=10000,
         deterministic=True,
         n_eval_episodes=20,
         render=False,
@@ -109,16 +109,6 @@ def train(
             device="cuda",
             tensorboard_log="logs",
         )
-    else:
-        model = DDPG(
-            "MultiInputPolicy",
-            vec_env,
-            verbose=0,
-            batch_size=128,
-            device="cuda",
-            tensorboard_log="logs",
-        )
-
     start_time = time.time()
 
     model.learn(
