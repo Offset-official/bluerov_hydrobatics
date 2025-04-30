@@ -46,7 +46,7 @@ class BlueRov(gym.Env):
         self.trajectory_file = trajectory_file
         self.trajectory = None
         self.threshold_distance = 0.1
-        self.angular_threshold = 2 * np.pi
+        self.angular_threshold = 0.2
 
         self.distance_to_goal_from_start = 0.0
 
@@ -148,6 +148,9 @@ class BlueRov(gym.Env):
             )
         self.distances_from_goal.append(self.distance_to_goal_from_start)
 
+        # Track the closest distance to goal so far
+        self.last_closest_distance_to_goal = self.distance_to_goal_from_start
+
         self.disturbance_dist = self.dynamics.reset()
 
         obs = self.compute_observation()
@@ -194,6 +197,10 @@ class BlueRov(gym.Env):
         distance_from_goal = self.compute_distance_from_goal()
 
         self.distances_from_goal.append(distance_from_goal)
+
+        # Update last_closest_distance_to_goal if current distance is smaller
+        if distance_from_goal < self.last_closest_distance_to_goal:
+            self.last_closest_distance_to_goal = distance_from_goal
 
         if distance_from_goal > self.distance_to_goal_from_start + 0.5:
             terminated = True
@@ -249,6 +256,8 @@ class BlueRov(gym.Env):
             obs["offset_x"][0] - offset_x_last,
             obs["offset_y"][0] - offset_y_last,
             obs["offset_z"][0] - offset_z_last,
+            self.last_closest_distance_to_goal,
+            terminated
         )
 
         # Update previous offsets for next step
@@ -275,13 +284,14 @@ class BlueRov(gym.Env):
         """
         Render the environment if in human mode.
         """
-        self.renderer.render(self.model_path, self.init_state)
         if self.trajectory is not None:
+            self.renderer.render(self.model_path, self.init_state, self.trajectory)
             self.renderer.visualize_waypoints(
                 self.trajectory,
                 current_idx=self.waypoint_idx,
             )
         else:
+            self.renderer.render(self.model_path, self.init_state)
             self.renderer.visualize_waypoints(
                 [[0, 0, 0, 0], self.goal_point],
                 current_idx=1,
