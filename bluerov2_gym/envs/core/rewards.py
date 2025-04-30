@@ -2,100 +2,98 @@ import numpy as np
 
 
 class Reward:
-    """
-    Same class shell ─ we only touch the trajectory-tracking section
-    and expose a few tunable coefficients up top.
-    """
-
     def __init__(self):
-        # ─── weights & misc ────────────────────────────────────────────────
-        self.dt        = 0.1      # [s]
-        self.k_cross   = 3.0      # ⊥-distance weight         ↑ (stronger pull)
-        self.k_align   = 0.6      # velocity-alignment weight ↑
-        self.k_prog    = 1.0      # forward-progress bonus
-        self.k_head    = 0.15     # heading-error penalty     ↓ (so it doesn’t dominate)
-        self.k_ctrl    = 0.01     # control-effort penalty
-        self.lookahead = 5        # way-points to peek ahead
-        self.finish_boost = 5.0   # one-time bonus on last wp
+        pass
 
-        # ─── running state ────────────────────────────────────────────────
-        self.prev_i        = 0    # last “closest-wp” index  (for Δprogress)
-        self.finish_flag   = False
-        self.last_reward   = 0.0  # (optional: for debugging)
-
-    # ──────────────────────────────────────────────────────────────────────
-    # SIMPLE BASELINE REWARD  (unchanged)                                  #
-    # ──────────────────────────────────────────────────────────────────────
     def get_reward(self, obs):
-        position_error   = np.linalg.norm([obs["x"][0], obs["y"][0], obs["z"][0]])
-        velocity_penalty = np.linalg.norm([obs["vx"][0], obs["vy"][0], obs["vz"][0]])
-        orientation_err  = abs(obs["theta"][0])
+        position_error = np.sqrt(obs["x"][0] ** 2 + obs["y"][0] ** 2 + obs["z"][0] ** 2)
 
-        return -(
-            1.0 * position_error +
-            0.1 * velocity_penalty +
-            0.5 * orientation_err
+        # Velocity penalty
+        velocity_penalty = np.sqrt(
+            obs["vx"][0] ** 2 + obs["vy"][0] ** 2 + obs["vz"][0] ** 2
         )
 
-    # ──────────────────────────────────────────────────────────────────────
-    # IMPROVED TRAJECTORY REWARD                                           #
-    # ──────────────────────────────────────────────────────────────────────
-    def get_reward_trajectory(self, obs, action, trajectory_file):
-        """
-        Observation keys expected:
-            x,y,z           : world-frame position  (m)
-            vx,vy,vz        : world-frame velocity  (m/s)
-            theta           : yaw heading           (rad)
-        """
-        self.reference = trajectory_file
-        N_ref          = len(self.reference)
+        # Orientation error
+        orientation_error = abs(obs["theta"][0])
 
-        # ── 1. nearest trajectory point ──────────────────────────────────
-        p      = np.array([obs["x"][0],  obs["y"][0],  obs["z"][0]])
-        dists  = np.linalg.norm(self.reference - p, axis=1)
-        i_star = int(np.argmin(dists))
-        p_star = self.reference[i_star]
+        # Combined reward
+        reward = -(
+            1.0 * position_error  # Weight for position error
+            + 0.1 * velocity_penalty  # Weight for velocity
+            + 0.5 * orientation_error  # Weight for orientation
+        )
 
-        # cross-track error (squared → smoother gradient when close)
-        e_cross = np.linalg.norm(p - p_star)
-        r_cross = -self.k_cross * e_cross**2
-
-        # ── 2. local tangent (+look-ahead) ────────────────────────────────
-        i_fwd   = min(i_star + self.lookahead, N_ref - 1)
-        tangent = self.reference[i_fwd] - p_star
-        if np.allclose(tangent, 0.0):
-            tangent = np.array([1e-6, 0, 0])  # degenerate (end of path)
-        tangent /= np.linalg.norm(tangent)
-
-        # ── 3. velocity alignment  (reward true speed in tangent dir) ────
-        v          = np.array([obs["vx"][0], obs["vy"][0], obs["vz"][0]])
-        v_along    = np.dot(v, tangent)          # signed
-        r_align    =  self.k_align * v_along      # >0 if moving forward
-
-        # ── 4. forward progress bonus (index-based) ──────────────────────
-        prog_steps = max(0, i_star - self.prev_i)
-        r_prog     = self.k_prog * prog_steps
-        self.prev_i = i_star
-
-        # ── 5. heading alignment penalty (optional) ──────────────────────
-        head_err = Reward.angle_wrap(np.arctan2(tangent[1], tangent[0]) - obs["theta"][0])
-        r_head   = -self.k_head * abs(head_err)
-
-        # ── 6. control effort penalty ────────────────────────────────────
-        r_ctrl = -self.k_ctrl * np.square(action).sum()
-
-        # ── 7. terminal “finish-line” bonus ──────────────────────────────
-        r_finish = 0.0
-        if not self.finish_flag and i_star >= N_ref - 2:
-            r_finish      = self.finish_boost
-            self.finish_flag = True     # give it only once
-
-        reward = r_cross + r_align + r_prog + r_head + r_ctrl + r_finish
-        self.last_reward = reward       # handy for external logging
         return reward
 
-    # ──────────────────────────────────────────────────────────────────────
-    @staticmethod
-    def angle_wrap(a):
-        """ wrap to (-π, π] """
-        return (a + np.pi) % (2 * np.pi) - np.pi
+
+class SinglePointReward:
+    def __init__(self, threshold=0.1, angular_threshold=0.1):
+        """
+        Initialize the SinglePointReward class.
+        goal_point: numpy array of shape (4,) containing x, y, z coordinates and heading angle (rad)
+        """
+        self.threshold = threshold
+        self.angular_threshold = angular_threshold
+
+    def get_reward(
+        self,
+        distance_to_goal,
+        theta_offset,
+        action_magnitude,
+        number_of_steps,
+        dot_to_goal=0.0,
+        last_distance_to_goal=0.0,
+        last_theta_offset=0.0,
+        offset_x=0.0,
+        offset_y=0.0,
+        offset_z=0.0,
+        offset_x_last=0.0,
+        offset_y_last=0.0,
+        offset_z_last=0.0,
+    ):
+        k_d, k_ang = 100.0, 5.0        # tune freely, start same order of magnitude
+        r_progress      = k_d   * -(distance_to_goal - last_distance_to_goal)
+        r_angle_prog    = k_ang * -(abs(theta_offset) - abs(last_theta_offset))
+
+        # 2.  Small time penalty to encourage short paths
+        r_step = -1.0                  # −1 each step
+
+        # 3.  Big terminal bonus
+        r_done = 0.0
+        
+        if distance_to_goal < self.threshold and abs(theta_offset) < self.angular_threshold:
+            r_done = 1_000.0           # 10³ not 10⁴ so gradient scales are similar
+        r_pos = -(distance_to_goal)
+        total_reward = r_progress + r_angle_prog + r_step + r_done + r_pos
+        return total_reward, (r_progress, r_angle_prog, r_step, r_done)
+
+
+class WayPointReward:
+    def __init__(self, waypoints, threshold=0.1):
+        """
+        Initialize the WayPointReward class.
+        waypoints: numpy array of shape (num_points, 4) containing x, y, z, coordinates and heading angle (rad)
+        """
+        self.waypoints = waypoints
+        self.current_waypoint_idx = 0
+        self.threshold = threshold
+        self.total_waypoints = len(waypoints)
+
+    def get_reward(self, obs):
+        if self.current_waypoint_idx >= len(self.waypoints):
+            return 0.0
+
+        current_waypoint = self.waypoints[self.current_waypoint_idx]
+        position_error = np.sqrt(
+            (obs["x"][0] - current_waypoint[0]) ** 2
+            + (obs["y"][0] - current_waypoint[1]) ** 2
+            + (obs["z"][0] - current_waypoint[2]) ** 2
+        )
+
+        orientation_error = abs(obs["theta"][0] - current_waypoint[3])
+
+        # Check if the waypoint is reached
+        if position_error < self.threshold:
+            self.current_waypoint_idx += 1
+
+        return -(position_error + orientation_error)

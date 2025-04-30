@@ -28,3 +28,4 @@ ENV/
 logs/
 trained_models/
 runs/
+successful_models/

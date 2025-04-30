@@ -5,7 +5,8 @@ import typer
 import numpy as np
 from importlib import resources
 from typing import Optional
-
+import os
+import bluerov2_gym
 import meshcat
 import meshcat.geometry as g
 import meshcat.transformations as tf
@@ -18,52 +19,30 @@ def load_trajectory_from_csv(file_path):
     Load trajectory waypoints from a CSV file
 
     Args:
-        file_path: Path to the CSV file containing x, y, z coordinates
+        file_path: Path to the CSV file containing x, y, z, coordinates and heading angle in rad
 
     Returns:
-        numpy array of shape (num_points, 3) containing x, y, z coordinates
+        numpy array of shape (num_points, 4) containing x, y, z, heading (rad)
     """
     waypoints = []
     with open(file_path, "r") as f:
         reader = csv.reader(f)
         header = next(reader)  # Skip header row
 
-        # Verify the CSV format
-        if header != ["x", "y", "z"]:
-            print(
-                f"Warning: CSV header {header} doesn't match expected format ['x', 'y', 'z']"
-            )
-
         for row in reader:
-            if len(row) >= 3:
+            if len(row) >= 4:
                 try:
-                    x, y, z = float(row[0]), float(row[1]), float(row[2])
-                    waypoints.append([x, y, z])
+                    x, y, z, theta = (
+                        float(row[0]),
+                        float(row[1]),
+                        float(row[2]),
+                        float(row[3]),
+                    )
+                    waypoints.append([x, y, z, theta])
                 except ValueError:
                     print(f"Warning: Skipping invalid row {row}")
 
     return np.array(waypoints)
-
-
-def calculate_heading(p1, p2):
-    """
-    Calculate heading angle (theta) between two points in the xy-plane
-
-    Args:
-        p1: First point [x, y, z]
-        p2: Second point [x, y, z]
-
-    Returns:
-        theta: Heading angle in radians
-    """
-    dx = p2[0] - p1[0]
-    dy = p2[1] - p1[1]
-
-    # Default heading if points are too close
-    if abs(dx) < 1e-6 and abs(dy) < 1e-6:
-        return 0
-
-    return np.arctan2(dy, dx)
 
 
 class TrajectoryVisualizer:
@@ -97,7 +76,17 @@ class TrajectoryVisualizer:
         # BlueROV2 model
         self.vis["vessel"].set_object(
             g.DaeMeshGeometry.from_file(model_path),
-            g.MeshLambertMaterial(color=0x0000FF, wireframe=False),
+            g.MeshLambertMaterial(
+                map=g.ImageTexture(
+                    image=g.PngImage.from_file(
+                        os.path.join(
+                            bluerov2_gym.__path__[0],
+                            "assets",
+                            "texture.png",
+                        )
+                    )
+                )
+            ),
         )
 
         # Ground/seafloor
@@ -115,9 +104,10 @@ class TrajectoryVisualizer:
             )
         )
 
-    def set_vessel_pose(self, position, theta):
+    def set_vessel_pose(self, position):
         """Set the position and orientation of the vessel"""
-        translation = np.array(position)
+        translation = np.array(position[:3])
+        theta = position[3]
         rotation_matrix = np.array(
             [
                 [np.cos(theta), -np.sin(theta), 0],
@@ -133,6 +123,8 @@ class TrajectoryVisualizer:
 
     def visualize_trajectory_points(self, trajectory):
         """Visualize trajectory as small white markers"""
+        # only use x, y, z coordinates for visualization
+        trajectory = trajectory[:, :3]
         points = np.array(trajectory).reshape(-1, 3)
 
         if len(points) > 1:
@@ -167,7 +159,7 @@ class TrajectoryVisualizer:
         Animate the vessel moving along the trajectory
 
         Args:
-            trajectory: numpy array of shape (num_points, 3) with x, y, z coordinates
+            trajectory: numpy array of shape (num_points, 4) with x, y, z, heading coordinates
             loop: Whether to loop the animation continuously
             speed: Speed factor for the animation (higher is faster)
         """
@@ -188,11 +180,8 @@ class TrajectoryVisualizer:
                     current_pos = trajectory[i]
                     next_pos = trajectory[i + 1]
 
-                    # Calculate heading between current and next point
-                    theta = calculate_heading(current_pos, next_pos)
-
                     # Update vessel position
-                    self.set_vessel_pose(current_pos, theta)
+                    self.set_vessel_pose(current_pos)
 
                     # Delay based on speed
                     time.sleep(0.1 / speed)
