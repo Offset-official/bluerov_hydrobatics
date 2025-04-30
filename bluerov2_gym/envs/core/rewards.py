@@ -35,6 +35,30 @@ class SinglePointReward:
         self.threshold = threshold
         self.angular_threshold = angular_threshold
 
+    def get_reward(
+        self,
+        distance_to_goal,
+        theta_offset,
+        action_magnitude,
+        number_of_steps,
+        dot_to_goal=0.0,
+        last_distance_to_goal=0.0,
+        offset_x=0.0,
+        offset_y=0.0,
+        offset_z=0.0,
+        offset_x_last=0.0,
+        offset_y_last=0.0,
+        offset_z_last=0.0,
+    ):
+        r_completion = 0
+        reward_tuple = np.array([])
+        r_number_of_steps = 0
+        if (
+            distance_to_goal < self.threshold
+            and abs(theta_offset) < self.angular_threshold
+        ):
+            distance_to_goal = 0.0
+            r_completion = 1000
 
 def get_reward(self, distance_to_goal, theta_offset, action_magnitude, number_of_steps):
     # Completion reward
