@@ -46,7 +46,7 @@ class BlueRov(gym.Env):
         self.trajectory_file = trajectory_file
         self.trajectory = None
         self.threshold_distance = 0.1
-        self.angular_threshold = 0.1
+        self.angular_threshold = 2 * np.pi
 
         self.distance_to_goal_from_start = 0.0
 
@@ -152,6 +152,11 @@ class BlueRov(gym.Env):
 
         obs = self.compute_observation()
 
+        # Initialize previous offsets for reward calculation
+        self.offset_x_last = obs["offset_x"][0]
+        self.offset_y_last = obs["offset_y"][0]
+        self.offset_z_last = obs["offset_z"][0]
+
         info = {
             "distance_from_goal": self.compute_distance_from_goal(),
             "current_heading": self.state["theta"],
@@ -226,15 +231,30 @@ class BlueRov(gym.Env):
         )
         dot_to_goal = np.dot(unit_to_goal, velocity)
 
-        reward_tuple = self.reward_fn.get_reward(
+        # Use previous offsets for reward calculation
+        offset_x_last = self.offset_x_last
+        offset_y_last = self.offset_y_last
+        offset_z_last = self.offset_z_last
+
+        total_reward, reward_tuple = self.reward_fn.get_reward(
             distance_from_goal,
             obs["offset_theta"][0],
             action_magnitude,
             self.number_of_steps,
             dot_to_goal,
-            distance_from_goal[-2],
+            self.distances_from_goal[-2],
+            obs["offset_x"][0],
+            obs["offset_y"][0],
+            obs["offset_z"][0],
+            obs["offset_x"][0] - offset_x_last,
+            obs["offset_y"][0] - offset_y_last,
+            obs["offset_z"][0] - offset_z_last,
         )
-        total_reward = sum(reward_tuple)
+
+        # Update previous offsets for next step
+        self.offset_x_last = obs["offset_x"][0]
+        self.offset_y_last = obs["offset_y"][0]
+        self.offset_z_last = obs["offset_z"][0]
 
         info = {
             "distance_from_goal": distance_from_goal,
