@@ -54,7 +54,10 @@ class BlueRov(gym.Env):
         init_y = 0.0
         init_z = 0.0
         init_theta = 0.0
-
+        init_vx = 0.0
+        init_vy = 0.0
+        init_vz = 0.0
+        init_omega = 0.0
         # Load trajectory if provided
         if trajectory_file is not None:
             self.trajectory = np.loadtxt(trajectory_file, delimiter=",")
@@ -69,6 +72,14 @@ class BlueRov(gym.Env):
             self.goal_point, self.distance_to_goal_from_start = (
                 self.compute_random_goal_point()
             )
+            self.init_velocity, self.init_angular_velocity = (
+                self.compute_random_velocities()
+            )
+            init_vx = self.init_velocity[0]
+            init_vy = self.init_velocity[1]
+            init_vz = self.init_velocity[2]
+            init_omega = self.init_angular_velocity
+
         self.waypoint_idx = 1
         self.reward_fn = SinglePointReward(
             threshold=self.threshold_distance, angular_threshold=self.angular_threshold
@@ -81,10 +92,10 @@ class BlueRov(gym.Env):
             "y": init_y,  # y position (m)
             "z": init_z,  # depth (m)
             "theta": init_theta,  # heading angle (rad)
-            "vx": 0.0,  # x velocity (m/s)
-            "vy": 0.0,  # y velocity (m/s)
-            "vz": 0.0,  # vertical velocity (m/s)
-            "omega": 0.0,  # angular velocity (rad/s)
+            "vx": init_vx,  # x velocity (m/s)
+            "vy": init_vy,  # y velocity (m/s)
+            "vz": init_vz,  # vertical velocity (m/s)
+            "omega": init_omega,  # angular velocity (rad/s)
         }
 
         if self.trajectory is not None:
@@ -146,6 +157,13 @@ class BlueRov(gym.Env):
             self.goal_point, self.distance_to_goal_from_start = (
                 self.compute_random_goal_point()
             )
+            self.init_velocity, self.init_angular_velocity = (
+                self.compute_random_velocities()
+            )
+            self.state["vx"] = self.init_velocity[0]
+            self.state["vy"] = self.init_velocity[1]
+            self.state["vz"] = self.init_velocity[2]
+            self.state["omega"] = self.init_angular_velocity
         self.distances_from_goal.append(self.distance_to_goal_from_start)
 
         # Track the closest distance to goal so far
@@ -257,7 +275,7 @@ class BlueRov(gym.Env):
             obs["offset_y"][0] - offset_y_last,
             obs["offset_z"][0] - offset_z_last,
             self.last_closest_distance_to_goal,
-            terminated
+            terminated,
         )
 
         # Update previous offsets for next step
@@ -343,6 +361,17 @@ class BlueRov(gym.Env):
 
     def compute_action_magnitude(self, action):
         return np.linalg.norm(action)
+
+    def compute_random_velocities(self):
+        """
+        Generate random velocities for the vehicle.
+        """
+        vx = np.random.uniform(-0.5, 0.5)
+        vy = np.random.uniform(-0.5, 0.5)
+        vz = np.random.uniform(-0.5, 0.5)
+        omega = np.random.uniform(-np.pi / 2, np.pi / 2)
+
+        return np.array([vx, vy, vz]), omega
 
     def compute_random_goal_point(self):
         """
