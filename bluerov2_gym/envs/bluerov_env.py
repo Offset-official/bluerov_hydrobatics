@@ -46,7 +46,7 @@ class BlueRov(gym.Env):
         self.trajectory_file = trajectory_file
         self.trajectory = None
         self.threshold_distance = 0.1
-        self.angular_threshold = 0.2
+        self.angular_threshold = np.pi * 2
 
         self.distance_to_goal_from_start = 0.0
 
@@ -370,6 +370,11 @@ class BlueRov(gym.Env):
         vy = np.random.uniform(-0.5, 0.5)
         vz = np.random.uniform(-0.5, 0.5)
         omega = np.random.uniform(-np.pi / 2, np.pi / 2)
+        vx = 0.0
+        vy = 0.0
+        vz = 0.0
+        omega = 0.0
+        
 
         return np.array([vx, vy, vz]), omega
 

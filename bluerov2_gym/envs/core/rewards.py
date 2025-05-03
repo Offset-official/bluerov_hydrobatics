@@ -60,7 +60,8 @@ class SinglePointReward:
             distance_to_goal = 0.0
             r_completion = 1500
         pos_reward = np.exp(-(distance_to_goal**3))
-        angle_reward = np.exp(-(theta_offset**2))
+        # angle_reward = np.exp(-(theta_offset**2))
+        angle_reward = 0
         total_reward = pos_reward + angle_reward + r_completion + (15*(last_closest_distance_to_goal - distance_to_goal))
         reward_tuple = np.array([])
         if terminated:
