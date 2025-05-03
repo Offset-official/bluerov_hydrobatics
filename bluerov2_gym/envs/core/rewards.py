@@ -62,14 +62,14 @@ class SinglePointReward:
             r_completion = 1500
         pos_reward = np.exp(-(distance_to_goal**3))
         # Incorporate both angle offset (to goal's target heading) and heading error (to next waypoint)
-        # angle_offset_reward = np.exp(-(theta_offset**2))
-        heading_error_reward = np.exp(-(heading_error**2))
+        angle_offset_reward = np.exp(-(theta_offset**2))
+        # heading_error_reward = np.exp(-(heading_error**2))
         total_reward = (
             pos_reward
-            # + angle_offset_reward
-            + heading_error_reward
+            + angle_offset_reward
+            # + heading_error_reward
             + r_completion
-            + (10 * (last_closest_distance_to_goal - distance_to_goal))
+            + (15 * (last_closest_distance_to_goal - distance_to_goal))
         )
         reward_tuple = np.array([])
         if terminated:

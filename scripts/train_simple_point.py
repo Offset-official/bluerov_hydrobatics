@@ -25,7 +25,7 @@ def train(
     output_dir: str = "./trained_models",
     total_timesteps: int = 1000000,
     n_steps: int = 8,
-    n_envs: int = 16,
+    n_envs: int = 8,
     model_name: str = "bluerov_simplepoint",
     render_mode: str = None,
 ):

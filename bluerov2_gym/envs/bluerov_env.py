@@ -46,7 +46,8 @@ class BlueRov(gym.Env):
         self.trajectory_file = trajectory_file
         self.trajectory = None
         self.threshold_distance = 0.1
-        self.angular_threshold = np.pi * 2
+        # self.angular_threshold = np.pi * 2
+        self.angular_threshold = 0.2
 
         self.distance_to_goal_from_start = 0.0
 
