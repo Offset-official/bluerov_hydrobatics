@@ -236,6 +236,10 @@ class BlueRov(gym.Env):
             self.waypoint_idx += 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
             self.distance_to_goal_from_start = self.compute_distance_from_goal()
+            self.state["vx"] = 0.0
+            self.state["vy"] = 0.0
+            self.state["vz"] = 0.0
+            self.state["omega"] = 0.0
             terminated = False
 
         # Compute dot_to_goal for straight-line motion encouragement
@@ -255,6 +259,15 @@ class BlueRov(gym.Env):
             ]
         )
         dot_to_goal = np.dot(unit_to_goal, velocity)
+
+        # Calculate desired heading angle (in x-y plane) and heading error
+        desired_heading = np.arctan2(
+            self.goal_point[1] - self.state["y"], self.goal_point[0] - self.state["x"]
+        )
+        current_heading = self.state["theta"]
+        heading_error = desired_heading - current_heading
+        # Normalize heading_error to [-pi, pi]
+        heading_error = (heading_error + np.pi) % (2 * np.pi) - np.pi
 
         # Use previous offsets for reward calculation
         offset_x_last = self.offset_x_last
@@ -276,6 +289,7 @@ class BlueRov(gym.Env):
             obs["offset_z"][0] - offset_z_last,
             self.last_closest_distance_to_goal,
             terminated,
+            heading_error,  # <-- Pass heading error to reward function
         )
 
         # Update previous offsets for next step
@@ -382,7 +396,7 @@ class BlueRov(gym.Env):
         """
         Generate a random point anywhere within a sphere of radius R around the origin.
         """
-        R = 1
+        R = 2
         theta = 2 * np.pi * random()
         phi = np.arccos(1 - 2 * random())
         r = R * (random() ** (1 / 3))  # Cube root for uniform distribution in volume
