@@ -51,6 +51,7 @@ class SinglePointReward:
         offset_z_last=0.0,
         last_closest_distance_to_goal=0.0,
         terminated=False,
+        heading_error=0.0,
     ):
         r_completion = 0
         if (
