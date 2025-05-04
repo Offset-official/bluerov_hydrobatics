@@ -91,12 +91,6 @@ class BlueRov(gym.Env):
             self.distance_to_goal_from_start = self.compute_distance_from_goal()
 
         self.init_state = deepcopy(self.state)
-        self.state["theta"] = np.random.uniform(
-            -np.pi/5, np.pi/5
-        )  # make theta and velocities random
-        self.state["vx"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
-        self.state["vy"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
-        self.state["vz"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
 
         # make theta and velocities random
         
@@ -141,8 +135,13 @@ class BlueRov(gym.Env):
         super().reset(seed=seed)
 
         self.state = deepcopy(self.init_state)
-        # self.state["theta"] = np.random.uniform(0, 2*np.pi)
-        # self.state[]
+        self.state["theta"] = np.random.uniform(
+                -np.pi/5, np.pi/5
+        )  # make theta and velocities random
+        self.state["vx"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
+        self.state["vy"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
+        self.state["vz"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
+        
 
         self.number_of_steps = 0
 
@@ -161,6 +160,8 @@ class BlueRov(gym.Env):
         self.last_closest_distance_to_goal = self.distance_to_goal_from_start
 
         self.disturbance_dist = self.dynamics.reset()
+
+        
 
         obs = self.compute_observation()
 
@@ -256,7 +257,7 @@ class BlueRov(gym.Env):
 
         total_reward, reward_tuple = self.reward_fn.get_reward(
             distance_from_goal,
-            # obs["offset_theta"][0],
+            self.state["theta"],
             action_magnitude,
             self.number_of_steps,
             dot_to_goal,
