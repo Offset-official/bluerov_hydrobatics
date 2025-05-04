@@ -91,6 +91,12 @@ class BlueRov(gym.Env):
             self.distance_to_goal_from_start = self.compute_distance_from_goal()
 
         self.init_state = deepcopy(self.state)
+        self.state["theta"] = np.random.uniform(
+            -np.pi/5, np.pi/5
+        )  # make theta and velocities random
+        self.state["vx"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
+        self.state["vy"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
+        self.state["vz"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
 
         # make theta and velocities random
         
