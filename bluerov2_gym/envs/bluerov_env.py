@@ -107,7 +107,7 @@ class BlueRov(gym.Env):
                 "offset_x": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "offset_y": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "offset_z": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
-                "theta": spaces.Box(-np.pi, np.pi, shape=(1,), dtype=np.float64),
+                "theta": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "vx": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "vy": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "vz": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
@@ -135,7 +135,8 @@ class BlueRov(gym.Env):
         super().reset(seed=seed)
 
         self.state = deepcopy(self.init_state)
-        self.state["theta"] = np.random.uniform(-np.pi, np.pi)
+        # self.state["theta"] = np.random.uniform(0, 2*np.pi)
+        # self.state[]
 
         self.number_of_steps = 0
 
