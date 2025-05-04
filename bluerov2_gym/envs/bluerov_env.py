@@ -135,9 +135,10 @@ class BlueRov(gym.Env):
         super().reset(seed=seed)
 
         self.state = deepcopy(self.init_state)
-        self.state["theta"] = np.random.uniform(
-                -np.pi/5, np.pi/5
-        )  # make theta and velocities random
+        # self.state["theta"] = np.random.uniform(
+        #         -np.pi/5, np.pi/5
+        # )  # make theta and velocities random
+        self.state["theta"] = 0
         self.state["vx"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
         self.state["vy"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
         self.state["vz"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
