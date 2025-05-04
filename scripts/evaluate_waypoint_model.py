@@ -67,7 +67,7 @@ def evaluate(
         # Collect data for plotting
         distances_from_goal.append(info[0]["distance_from_goal"])
         rewards.append(sum(info[0]["reward_tuple"]))
-        angle_offsets.append(info[0]["angle_offset"])
+        # angle_offsets.append(info[0]["angle_offset"])
         reward_tuples.append(info[0]["reward_tuple"])
 
         if trajectory_file is not None:
@@ -89,7 +89,7 @@ def evaluate(
 
     ax1.plot(distances_from_goal, label="Distance from goal", color="blue")
     ax1.plot(rewards, label="Reward", color="orange")
-    ax1.plot(angle_offsets, label="Angle offset", color="cyan")
+    # ax1.plot(angle_offsets, label="Angle offset", color="cyan")
     ax1.set_xlabel("Time step")
     ax1.set_ylabel("Value")
     ax1.set_title("Distance from Goal, Reward, and Angle Offset (Full Trajectory)")
