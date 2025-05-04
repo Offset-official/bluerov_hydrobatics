@@ -99,6 +99,7 @@ class Dynamics:
         state["y"] += (vx * np.sin(theta) + vy * np.cos(theta)) * self.dt
         state["z"] += vz * self.dt
         state["theta"] += omega * self.dt
+        state["theta"] = state["theta"] % (2 * np.pi)  - np.pi  # Normalize angle
 
         # Velocity updates (dynamic equations with hydrodynamic forces)
 
