@@ -108,6 +108,7 @@ class BlueRov(gym.Env):
                 "offset_y": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "offset_z": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "theta": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
+                "target_theta": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "vx": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "vy": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "vz": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
@@ -138,7 +139,7 @@ class BlueRov(gym.Env):
         # self.state["theta"] = np.random.uniform(
         #         -np.pi/5, np.pi/5
         # )  # make theta and velocities random
-        self.state["theta"] = 0
+        # self.state["theta"] = 0
         self.state["vx"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
         self.state["vy"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
         self.state["vz"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
@@ -231,6 +232,7 @@ class BlueRov(gym.Env):
             self.waypoint_idx += 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
             self.distance_to_goal_from_start = self.compute_distance_from_goal()
+            # self.state["theta"] = 0
             terminated = False
 
         # Compute dot_to_goal for straight-line motion encouragement
@@ -258,7 +260,9 @@ class BlueRov(gym.Env):
 
         total_reward, reward_tuple = self.reward_fn.get_reward(
             distance_from_goal,
+            # obs["offset_theta"][0],
             self.state["theta"],
+            obs["target_theta"][0],
             action_magnitude,
             self.number_of_steps,
             dot_to_goal,
@@ -270,7 +274,8 @@ class BlueRov(gym.Env):
             obs["offset_y"][0] - offset_y_last,
             obs["offset_z"][0] - offset_z_last,
             self.last_closest_distance_to_goal,
-            terminated
+            terminated,
+
         )
 
         # Update previous offsets for next step
@@ -334,6 +339,7 @@ class BlueRov(gym.Env):
             "offset_y": np.array([self.state["y"] - self.goal_point[1]]),
             "offset_z": np.array([self.state["z"] - self.goal_point[2]]),
             "theta": np.array([self.state["theta"]]),
+            "target_theta": np.array([self.goal_point[3]]),
             "vx": np.array([self.state["vx"]]),
             "vy": np.array([self.state["vy"]]),
             "vz": np.array([self.state["vz"]]),
