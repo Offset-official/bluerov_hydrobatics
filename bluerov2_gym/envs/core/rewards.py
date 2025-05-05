@@ -74,6 +74,8 @@ class SinglePointReward:
         # penalise small actions with a smooth function (maximum at 2 )
         action_penalty = np.exp(-(action_magnitude**2))
         total_reward += action_penalty
+        total_reward += 0.1 * dot_to_goal
+        total_reward -= 0.05 * number_of_steps
         return (total_reward, reward_tuple)
 
 
