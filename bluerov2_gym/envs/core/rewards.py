@@ -72,7 +72,7 @@ class SinglePointReward:
         if terminated:
             total_reward -= 500
         # penalise small actions with a smooth function (maximum at 2 )
-        action_penalty = -np.exp(-(action_magnitude**2))*5
+        action_penalty = np.exp(-(action_magnitude**2))
         total_reward += action_penalty
         return (total_reward, reward_tuple)
 
