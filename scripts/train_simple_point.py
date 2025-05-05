@@ -23,7 +23,7 @@ MAX_EPISODE_STEPS = 50
 def train(
     model_type: Annotated[str, typer.Argument(help="Model type: A2C, PPO")],
     output_dir: str = "./trained_models",
-    total_timesteps: int = 2000000,
+    total_timesteps: int = 5000000,
     n_steps: int = 8,
     n_envs: int = 16,
     model_name: str = "bluerov_simplepoint",
