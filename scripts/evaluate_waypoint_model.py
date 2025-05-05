@@ -60,6 +60,9 @@ def evaluate(
     while not done:
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, dones, info = env.step(action)
+        # print(obs["offset_theta"])
+        # print(obs["theta"], obs["target_theta"])
+        
         total_reward += sum(info[0]["reward_tuple"])
         env.unwrapped.env_method("step_sim")
         step_count += 1
@@ -74,6 +77,7 @@ def evaluate(
             # Unwrap to get the BlueRov environment instance robustly
             base_env = env.venv
             waypoint_idx = getattr(base_env, "waypoint_idx", None)
+    
             if waypoint_idx is not None and waypoint_idx >= num_waypoints:
                 success = True
                 print(f"All waypoints completed in {step_count} steps.")

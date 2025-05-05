@@ -27,7 +27,7 @@ class Reward:
 
 
 class SinglePointReward:
-    def __init__(self, threshold=0.1, angular_threshold=0.1):
+    def __init__(self, threshold=0.25, angular_threshold=0.1):
         """
         Initialize the SinglePointReward class.
         goal_point: numpy array of shape (4,) containing x, y, z coordinates and heading angle (rad)
@@ -39,6 +39,7 @@ class SinglePointReward:
         self,
         distance_to_goal,
         theta,
+        target_theta,
         action_magnitude,
         number_of_steps,
         dot_to_goal=0.0,
@@ -51,6 +52,8 @@ class SinglePointReward:
         offset_z_last=0.0,
         last_closest_distance_to_goal=0.0,
         terminated=False,
+        
+
     ):
         r_completion = 0
         if (
@@ -61,7 +64,8 @@ class SinglePointReward:
             r_completion = 1500
         pos_reward = np.exp(-(distance_to_goal**3))
         # angle_reward = np.exp(-(abs(theta_offset)))
-        angle_reward = np.exp(-(abs(theta))) 
+        # theta_offset = abs()
+        angle_reward = -abs(theta - target_theta)
         # angle_reward = 0
         total_reward = pos_reward + angle_reward + r_completion + (15*(last_closest_distance_to_goal - distance_to_goal))
         reward_tuple = np.array([])
