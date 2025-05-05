@@ -35,47 +35,117 @@ class SinglePointReward:
         self.threshold = threshold
         self.angular_threshold = angular_threshold
 
-    def get_reward(
-        self,
-        distance_to_goal,
-        theta,
-        target_theta,
-        action_magnitude,
-        number_of_steps,
-        dot_to_goal=0.0,
-        last_distance_to_goal=0.0,
-        offset_x=0.0,
-        offset_y=0.0,
-        offset_z=0.0,
-        offset_x_last=0.0,
-        offset_y_last=0.0,
-        offset_z_last=0.0,
-        last_closest_distance_to_goal=0.0,
-        terminated=False,
-        
+    import numpy as np
 
-    ):
-        r_completion = 0
-        if (
-            distance_to_goal < self.threshold
-            # and abs(theta_offset) < self.angular_threshold
+    def wrap_to_pi(self, angle):
+        """Wrap any angle in radians to [−π, +π]."""
+        return (angle + np.pi) % (2 * np.pi) - np.pi
+
+    def get_reward(
+            self,
+            distance_to_goal,
+            theta,
+            target_theta,
+            action_magnitude,
+            number_of_steps,
+            dot_to_goal=0.0,
+            last_distance_to_goal=0.0,
+            offset_x=0.0,
+            offset_y=0.0,
+            offset_z=0.0,
+            offset_x_last=0.0,
+            offset_y_last=0.0,
+            offset_z_last=0.0,
+            last_closest_distance_to_goal=0.0,
+            terminated=False,
         ):
+        """
+        Reward that
+        • requires you to face the waypoint to get the big completion bonus,
+        • adds a cosine‐based heading alignment bonus,
+        • only rewards forward‐velocity when heading is within a small cone,
+        • does NOT reward yaw‐actions (so turning is “free” of penalty),
+        • keeps your previous distance‐based shaping, step‐penalty, and dot‐to‐goal.
+        """
+
+        # 1) Completion bonus only if both position AND heading are within threshold
+        r_completion = 0
+        heading_error = self.wrap_to_pi(theta - target_theta)
+        if (distance_to_goal < self.threshold
+            and abs(heading_error) < self.angular_threshold):
             distance_to_goal = 0.0
             r_completion = 1500
+
+        # 2) Position‐based shaping (as before)
         pos_reward = np.exp(-(distance_to_goal**3))
-        # angle_reward = np.exp(-(abs(theta_offset)))
-        # theta_offset = abs()
-        angle_reward = -abs(theta - target_theta)
-        # angle_reward = 0
-        total_reward = pos_reward + angle_reward + r_completion + (15*(last_closest_distance_to_goal - distance_to_goal))
-        reward_tuple = np.array([])
-        if terminated:
-            total_reward -= 500
-        # penalise small actions with a smooth function (maximum at 2 )
-        action_penalty = np.exp(-(action_magnitude**2))
-        total_reward += action_penalty
-        total_reward += 0.1 * dot_to_goal
-        total_reward -= 0.05 * number_of_steps
+
+        # 3) Angle‐to‐target‐heading penalty (unchanged)
+        angle_reward = -abs(heading_error)
+
+        # 4) Progress‐toward‐goal shaping (unchanged)
+        progress_reward = 15.0 * (last_closest_distance_to_goal - distance_to_goal)
+
+        # 5) Per‐step time penalty (to discourage loitering)
+        time_penalty = 0.05 * number_of_steps
+
+        # 6) Action penalty: only on translational magnitude, not on yaw‑torque
+        #    so the agent can turn “for free” to fix heading.
+        #    We assume action_magnitude is a vector [ax, ay, az, ayaw];
+        #    if it’s a scalar sum you may need to split out yaw component.
+        act = action_magnitude
+    # detect if iterable (vector) or scalar:
+        try:
+            # if it has length ≥3, treat first 3 as translation
+            if len(act) >= 3:
+                trans_action_mag = np.linalg.norm(np.array(act[:3]))
+            else:
+                # vector but <3 dims? just norm the whole thing
+                trans_action_mag = np.linalg.norm(np.array(act))
+        except TypeError:
+            # not iterable → scalar
+            trans_action_mag = float(act)
+            action_penalty = np.exp(-(trans_action_mag**2))
+
+        # 7) Cosine‐based heading alignment bonus
+        w_heading = 3.0
+        heading_bonus = w_heading * np.cos(heading_error)
+
+        # 8) Gate forward‐velocity reward on good heading
+        w_fwd = 0.1
+        gate_thresh = 15 * np.pi / 180.0  # 15°
+        fwd_reward = 0.0
+        if abs(heading_error) < gate_thresh:
+            fwd_reward = w_fwd * dot_to_goal
+
+        # 9) Penalty on termination by timeout/collision
+        term_penalty = -500.0 if terminated else 0.0
+
+        # Sum all terms
+        total_reward = (
+            r_completion
+            + pos_reward
+            + angle_reward
+            + progress_reward
+            - time_penalty
+            + action_penalty
+            + heading_bonus
+            + fwd_reward
+            + term_penalty
+        )
+
+        # If you need to log individual terms, you can return them in reward_tuple
+        reward_tuple = np.array([
+            pos_reward,
+            angle_reward,
+            progress_reward,
+            -time_penalty,
+            action_penalty,
+            heading_bonus,
+            fwd_reward,
+            r_completion,
+            term_penalty
+        ])
+
         return (total_reward, reward_tuple)
 
 
