@@ -139,10 +139,12 @@ class BlueRov(gym.Env):
         # self.state["theta"] = np.random.uniform(
         #         -np.pi/5, np.pi/5
         # )  # make theta and velocities random
-        # self.state["theta"] = 0
-        self.state["vx"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
-        self.state["vy"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
-        self.state["vz"] = np.random.uniform(-0.5, 0.5)  # make theta and velocities random
+        self.state["theta"] = np.random.uniform(
+            -np.pi, np.pi
+        )
+        self.state["vx"] = np.random.uniform(-2.0, 2.0)  # make theta and velocities random
+        self.state["vy"] = np.random.uniform(-2.0, 2.0)  # make theta and velocities random
+        self.state["vz"] = np.random.uniform(-2.0, 2.0)  # make theta and velocities random
         
 
         self.number_of_steps = 0
