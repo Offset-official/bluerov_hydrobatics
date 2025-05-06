@@ -103,6 +103,9 @@ class BlueRov(gym.Env):
 
         self.init_state = deepcopy(self.state)
 
+        # make theta and velocities random
+        
+
         self.action_space = spaces.Box(
             low=-1.0,
             high=1.0,
@@ -115,9 +118,8 @@ class BlueRov(gym.Env):
                 "offset_x": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "offset_y": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "offset_z": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
-                "offset_theta": spaces.Box(
-                    -np.inf, np.inf, shape=(1,), dtype=np.float64
-                ),
+                "theta": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
+                "target_theta": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "vx": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "vy": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
                 "vz": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
@@ -145,6 +147,16 @@ class BlueRov(gym.Env):
         super().reset(seed=seed)
 
         self.state = deepcopy(self.init_state)
+        # self.state["theta"] = np.random.uniform(
+        #         -np.pi/5, np.pi/5
+        # )  # make theta and velocities random
+        self.state["theta"] = np.random.uniform(
+            -np.pi, np.pi
+        )
+        self.state["vx"] = np.random.uniform(-2.0, 2.0)  # make theta and velocities random
+        self.state["vy"] = np.random.uniform(-2.0, 2.0)  # make theta and velocities random
+        self.state["vz"] = np.random.uniform(-2.0, 2.0)  # make theta and velocities random
+        
 
         self.number_of_steps = 0
 
@@ -171,7 +183,11 @@ class BlueRov(gym.Env):
 
         self.disturbance_dist = self.dynamics.reset()
 
+        
+
         obs = self.compute_observation()
+
+        
 
         # Initialize previous offsets for reward calculation
         self.offset_x_last = obs["offset_x"][0]
@@ -227,7 +243,7 @@ class BlueRov(gym.Env):
 
         is_success = bool(
             distance_from_goal < self.threshold_distance
-            and (abs(obs["offset_theta"][0]) < self.angular_threshold)
+            # and (abs(obs["offset_theta"][0]) < self.angular_threshold)
         )
 
         terminated = bool(terminated or is_success)
@@ -236,10 +252,7 @@ class BlueRov(gym.Env):
             self.waypoint_idx += 1
             self.goal_point = self.trajectory[self.waypoint_idx, :]
             self.distance_to_goal_from_start = self.compute_distance_from_goal()
-            self.state["vx"] = 0.0
-            self.state["vy"] = 0.0
-            self.state["vz"] = 0.0
-            self.state["omega"] = 0.0
+            # self.state["theta"] = 0
             terminated = False
 
         # Compute dot_to_goal for straight-line motion encouragement
@@ -276,7 +289,9 @@ class BlueRov(gym.Env):
 
         total_reward, reward_tuple = self.reward_fn.get_reward(
             distance_from_goal,
-            obs["offset_theta"][0],
+            # obs["offset_theta"][0],
+            self.state["theta"],
+            obs["target_theta"][0],
             action_magnitude,
             self.number_of_steps,
             dot_to_goal,
@@ -289,7 +304,7 @@ class BlueRov(gym.Env):
             obs["offset_z"][0] - offset_z_last,
             self.last_closest_distance_to_goal,
             terminated,
-            heading_error,  # <-- Pass heading error to reward function
+
         )
 
         # Update previous offsets for next step
@@ -303,7 +318,7 @@ class BlueRov(gym.Env):
             "reward": total_reward,
             "action_magnitude": action_magnitude,
             "is_success": is_success,
-            "angle_offset": abs(obs["offset_theta"][0]),
+            # "angle_offset": abs(obs["offset_theta"][0]),
             "current_heading": self.state["theta"],
         }
 
@@ -352,7 +367,8 @@ class BlueRov(gym.Env):
             "offset_x": np.array([self.state["x"] - self.goal_point[0]]),
             "offset_y": np.array([self.state["y"] - self.goal_point[1]]),
             "offset_z": np.array([self.state["z"] - self.goal_point[2]]),
-            "offset_theta": np.array([self.state["theta"] - self.goal_point[3]]),
+            "theta": np.array([self.state["theta"]]),
+            "target_theta": np.array([self.goal_point[3]]),
             "vx": np.array([self.state["vx"]]),
             "vy": np.array([self.state["vy"]]),
             "vz": np.array([self.state["vz"]]),
@@ -406,7 +422,7 @@ class BlueRov(gym.Env):
         z = r * np.cos(phi)
 
         heading_theta = np.random.uniform(
-            -np.pi / 2, np.pi / 2
+            -np.pi, np.pi
         )  # do not ever make the vehicle move more than 180 degrees
 
         return np.array([x, y, z, heading_theta]), r

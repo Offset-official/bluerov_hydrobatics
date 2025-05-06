@@ -52,7 +52,7 @@ def generate_spiral_trajectory(num_points=100, radius=5.0, depth=9.0, num_loops=
     for i in range(num_points - 1):
         p1 = np.array([x[i], y[i], z[i]])
         p2 = np.array([x[i + 1], y[i + 1], z[i + 1]])
-        headings[i] = calculate_heading(p1, p2)
+        headings[i] = calculate_heading(p1, p2) % (2 * np.pi)  # Ensure between 0 and 2π
     headings[-1] = headings[-2]  # Last heading same as second last
 
     return np.column_stack((x, y, z, headings))

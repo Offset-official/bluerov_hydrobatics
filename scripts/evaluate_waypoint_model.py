@@ -60,6 +60,9 @@ def evaluate(
     while not done:
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, dones, info = env.step(action)
+        # print(obs["offset_theta"])
+        # print(obs["theta"], obs["target_theta"])
+        
         total_reward += sum(info[0]["reward_tuple"])
         env.unwrapped.env_method("step_sim")
         step_count += 1
@@ -67,13 +70,14 @@ def evaluate(
         # Collect data for plotting
         distances_from_goal.append(info[0]["distance_from_goal"])
         rewards.append(sum(info[0]["reward_tuple"]))
-        angle_offsets.append(info[0]["angle_offset"])
+        # angle_offsets.append(info[0]["angle_offset"])
         reward_tuples.append(info[0]["reward_tuple"])
 
         if trajectory_file is not None:
             # Unwrap to get the BlueRov environment instance robustly
             base_env = env.venv
             waypoint_idx = getattr(base_env, "waypoint_idx", None)
+    
             if waypoint_idx is not None and waypoint_idx >= num_waypoints:
                 success = True
                 print(f"All waypoints completed in {step_count} steps.")
@@ -89,7 +93,7 @@ def evaluate(
 
     ax1.plot(distances_from_goal, label="Distance from goal", color="blue")
     ax1.plot(rewards, label="Reward", color="orange")
-    ax1.plot(angle_offsets, label="Angle offset", color="cyan")
+    # ax1.plot(angle_offsets, label="Angle offset", color="cyan")
     ax1.set_xlabel("Time step")
     ax1.set_ylabel("Value")
     ax1.set_title("Distance from Goal, Reward, and Angle Offset (Full Trajectory)")
