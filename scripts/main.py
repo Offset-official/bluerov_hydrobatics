@@ -12,25 +12,30 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 
 class PIDController:
-    def __init__(self, kp, ki, kd):
+    def __init__(self, kp, ki, kd, integral_limit=10.0):
         self.kp = kp
         self.ki = ki
         self.kd = kd
-
-        # Initialize error terms
+        self.integral_limit = integral_limit
         self.error_sum = 0
-        self.prev_error = 0
+        self.prev_error = None  # None to detect first call
 
     def compute(self, error, dt):
         # Proportional term
         p_term = self.kp * error
 
-        # Integral term
+        # Integral term with anti-windup
         self.error_sum += error * dt
+        self.error_sum = np.clip(
+            self.error_sum, -self.integral_limit, self.integral_limit
+        )
         i_term = self.ki * self.error_sum
 
-        # Derivative term
-        d_term = self.kd * (error - self.prev_error) / dt
+        # Derivative term (avoid kick on first call)
+        if self.prev_error is None or dt == 0:
+            d_term = 0.0
+        else:
+            d_term = self.kd * (error - self.prev_error) / dt
         self.prev_error = error
 
         # Total control output
@@ -41,7 +46,7 @@ class PIDController:
     def reset(self):
         """Reset the error history"""
         self.error_sum = 0
-        self.prev_error = 0
+        self.prev_error = None
 
 
 def load_trajectory_from_csv(file_path):
@@ -78,145 +83,132 @@ def calculate_heading(p1, p2):
 
 
 def run_pid_controller(trajectory_file, max_steps=100000):
-    # Define trajectory
     waypoints = load_trajectory_from_csv(trajectory_file)
     if len(waypoints) == 0:
         print("No valid waypoints found in trajectory file.")
         return
 
-    # Create the environment with rendering enabled and increased time limit
     env = gym.make(
         "BlueRov-v0",
         render_mode="human",
         trajectory_file=trajectory_file,
         max_episode_steps=max_steps,
     )
-
     base_env = env.unwrapped
 
-    exit()
-
-    # Initialize PID controllers with tuned parameters
-    pid_x = PIDController(kp=1.0, ki=0.0, kd=0.0)
-    pid_y = PIDController(kp=1.0, ki=0.0, kd=0.0)
-    pid_z = PIDController(kp=1.0, ki=0.0, kd=0.0)
-    pid_heading = PIDController(kp=1.0, ki=0.0, kd=0.0)
-
-    # Reset all controllers
-    pid_x.reset()
-    pid_y.reset()
-    pid_z.reset()
-    pid_heading.reset()
+    pid_x = PIDController(kp=10.0, ki=0.0, kd=0.0)
+    pid_y = PIDController(kp=10.0, ki=0.0, kd=0.0)
+    pid_z = PIDController(kp=10.0, ki=0.0, kd=0.0)
+    pid_heading = PIDController(kp=10.0, ki=0.0, kd=0.0)
 
     dt = 0.1
     proximity_threshold = 0.1
-    current_waypoint_idx = 1
+    obs, _ = env.reset()
     step_count = 0
+    episode = 0
 
-    print(f"\nStarting trajectory tracking with {len(waypoints)} waypoints")
-    print(
-        f"Initial position: x={base_env.state['x']:.2f}, y={base_env.state['y']:.2f}, z={base_env.state['z']:.2f}"
-    )
-    print(f"Initial heading: {base_env.state['theta']:.2f} rad")
-    print(f"\nWaiting for 5 seconds to stabilize the simulation...")
-    time.sleep(5)
+    while episode < 1:  # Run one full trajectory episode
+        current_waypoint_idx = 0
+        pid_x.reset()
+        pid_y.reset()
+        pid_z.reset()
+        pid_heading.reset()
 
-    while step_count < max_steps:
-        # Use true state for control
-        current_pos = np.array(
-            [base_env.state["x"], base_env.state["y"], base_env.state["z"]]
-        )
-        current_heading = base_env.state["theta"]
-
-        target_waypoint = waypoints[current_waypoint_idx]
-        target_pos = np.array(target_waypoint[:3])
-        target_theta = target_waypoint[3]
-
-        # Calculate position errors
-        error_x = target_pos[0] - current_pos[0]
-        error_y = target_pos[1] - current_pos[1]
-        error_z = target_pos[2] - current_pos[2]
-
-        # Calculate heading error (accounting for angle wrapping)
-        error_heading = np.arctan2(
-            np.sin(target_theta - current_heading),
-            np.cos(target_theta - current_heading),
-        )
-
-        # Compute PID control outputs
-        control_x = pid_x.compute(error_x, dt)
-        control_y = pid_y.compute(error_y, dt)
-        control_z = pid_z.compute(error_z, dt)
-        control_heading = pid_heading.compute(error_heading, dt)
-
-        # Convert to BlueROV action space
-        # [forward, lateral, vertical, rotation]
-        # Transform x, y controls to forward/lateral based on current heading
-        forward = control_x * np.cos(current_heading) + control_y * np.sin(
-            current_heading
-        )
-        lateral = -control_x * np.sin(current_heading) + control_y * np.cos(
-            current_heading
-        )
-
-        action = np.clip(
-            [
-                forward,  # Forward/backward
-                lateral,  # Left/right
-                control_z,  # Up/down
-                control_heading,  # Rotation
-            ],
-            -1.0,
-            1.0,
-        )
-
-        obs, reward, terminated, truncated, info = env.step(action)
-        print(f"Reward: {reward:.2f}")
-
-        # Print status
-        distance_to_target = np.linalg.norm(current_pos - target_pos)
-        heading_error_to_target = np.arctan2(
-            np.sin(target_theta - current_heading),
-            np.cos(target_theta - current_heading),
-        )
-
+        print(f"\nStarting trajectory tracking with {len(waypoints)} waypoints")
         print(
-            f"Step {step_count}: Position (x={base_env.state['x']:.2f}, y={base_env.state['y']:.2f}, z={base_env.state['z']:.2f})"
+            f"Initial position: x={base_env.state['x']:.2f}, y={base_env.state['y']:.2f}, z={base_env.state['z']:.2f}"
         )
-        print(
-            f"Heading: {base_env.state['theta']:.2f} rad, Target: {target_theta:.2f} rad, Error: {heading_error_to_target:.2f} rad"
-        )
-        print(
-            f"Current waypoint: {current_waypoint_idx}, Distance: {distance_to_target:.2f}"
-        )
-        print(
-            f"Action: [{action[0]:.2f}, {action[1]:.2f}, {action[2]:.2f}, {action[3]:.2f}]"
-        )
+        print(f"Initial heading: {base_env.state['theta']:.2f} rad")
+        print(f"\nWaiting for 5 seconds to stabilize the simulation...")
+        time.sleep(5)
 
-        # Check if we've reached the current waypoint
-        if (
-            distance_to_target < proximity_threshold
-            and abs(heading_error_to_target) < 0.1
-        ):
-            print(f"Reached waypoint {current_waypoint_idx}")
-            current_waypoint_idx += 1
+        while step_count < max_steps and current_waypoint_idx < len(waypoints):
+            current_pos = np.array(
+                [base_env.state["x"], base_env.state["y"], base_env.state["z"]]
+            )
+            current_heading = base_env.state["theta"]
 
-            pid_x.reset()
-            pid_y.reset()
-            pid_z.reset()
-            pid_heading.reset()
+            target_waypoint = waypoints[current_waypoint_idx]
+            target_pos = np.array(target_waypoint[:3])
+            target_theta = target_waypoint[3]
 
-            if current_waypoint_idx >= len(waypoints):
-                print("Trajectory completed!")
+            error_x = target_pos[0] - current_pos[0]
+            error_y = target_pos[1] - current_pos[1]
+            error_z = target_pos[2] - current_pos[2]
+            error_heading = np.arctan2(
+                np.sin(target_theta - current_heading),
+                np.cos(target_theta - current_heading),
+            )
+
+            control_x = pid_x.compute(error_x, dt)
+            control_y = pid_y.compute(error_y, dt)
+            control_z = pid_z.compute(error_z, dt)
+            control_heading = pid_heading.compute(error_heading, dt)
+
+            forward = control_x * np.cos(current_heading) + control_y * np.sin(
+                current_heading
+            )
+            lateral = -control_x * np.sin(current_heading) + control_y * np.cos(
+                current_heading
+            )
+
+            action = np.clip(
+                [
+                    forward,
+                    lateral,
+                    control_z,
+                    control_heading,
+                ],
+                -1.0,
+                1.0,
+            )
+
+            obs, reward, terminated, truncated, info = env.step(action)
+            print(f"Reward: {reward:.2f}")
+
+            distance_to_target = np.linalg.norm(current_pos - target_pos)
+            heading_error_to_target = np.arctan2(
+                np.sin(target_theta - current_heading),
+                np.cos(target_theta - current_heading),
+            )
+
+            print(
+                f"Step {step_count}: Position (x={base_env.state['x']:.2f}, y={base_env.state['y']:.2f}, z={base_env.state['z']:.2f})"
+            )
+            print(
+                f"Heading: {base_env.state['theta']:.2f} rad, Target: {target_theta:.2f} rad, Error: {heading_error_to_target:.2f} rad"
+            )
+            print(
+                f"Current waypoint: {current_waypoint_idx}, Distance: {distance_to_target:.2f}"
+            )
+            print(
+                f"Action: [{action[0]:.2f}, {action[1]:.2f}, {action[2]:.2f}, {action[3]:.2f}]"
+            )
+
+            # Check if we've reached the current waypoint
+            if (
+                distance_to_target < proximity_threshold
+                and abs(heading_error_to_target) < 0.1
+            ):
+                print(f"Reached waypoint {current_waypoint_idx}")
+                current_waypoint_idx += 1
+                pid_x.reset()
+                pid_y.reset()
+                pid_z.reset()
+                pid_heading.reset()
+                # If all waypoints are done, break
+                if current_waypoint_idx >= len(waypoints):
+                    print("Trajectory completed!")
+                    break
+
+            if terminated or truncated:
+                print("Episode terminated or truncated")
                 break
 
-        # Check if episode ended
-        if terminated or truncated:
-            print("Episode terminated or truncated")
-            break
+            time.sleep(dt)
+            step_count += 1
 
-        time.sleep(0.1)
-        step_count += 1
+        episode += 1
 
     env.close()
 
