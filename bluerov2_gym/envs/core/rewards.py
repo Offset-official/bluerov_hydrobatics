@@ -68,14 +68,24 @@ class SinglePointReward:
         angle_reward = -abs(theta - target_theta)
         # angle_reward = 0
         total_reward = pos_reward + angle_reward + r_completion + (15*(last_closest_distance_to_goal - distance_to_goal))
-        reward_tuple = np.array([])
+        r_termination = 0
         if terminated:
-            total_reward -= 500
+            r_termination = -500
         # penalise small actions with a smooth function (maximum at 2 )
         action_penalty = np.exp(-(action_magnitude**2))
         total_reward += action_penalty
         total_reward += 0.1 * dot_to_goal
         total_reward -= 0.05 * number_of_steps
+        total_reward += r_termination
+        reward_tuple = (
+            pos_reward,
+            angle_reward, 
+            r_completion,
+            r_termination,
+            action_penalty,
+            0.1 * dot_to_goal,
+            -0.05 * number_of_steps,
+        )
         return (total_reward, reward_tuple)
 
 

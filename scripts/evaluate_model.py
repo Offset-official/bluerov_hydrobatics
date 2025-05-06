@@ -46,17 +46,12 @@ def evaluate(
         time.sleep(5)
         current_ep_rewards = []
         current_ep_reward_tuples = []
-        current_ep_angle_offsets = []
         while not done:
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, dones, info = env.step(action)
             total_reward += reward
-            # current_ep_rewards.append(sum(info[0]["reward_tuple"]))
-            # current_ep_reward_tuples.append(info[0]["reward_tuple"])
-
-            # distances_from_goal.append(info[0]["distance_from_goal"])
-            # current_ep_angle_offsets.append(info[0]["angle_offset"])
-
+            current_ep_rewards.append(reward)
+            current_ep_reward_tuples.append(info[0]["reward_tuple"])
             time.sleep(0.1)
             env.unwrapped.env_method("step_sim")
             done = dones[0]
@@ -64,47 +59,42 @@ def evaluate(
                 success = bool(info[0].get("is_success", False))
 
         episode_rewards.append(total_reward)
-        success_count += success
-        # print(
-        #     f"Episode {ep}/{num_episodes} — Reward: {total_reward:.2f}  Success: {success} Episode Length: {len(distances_from_goal)}"
-        # )
-        # fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+        position_rewards = [
+            reward_tuple[0] for reward_tuple in current_ep_reward_tuples
+        ]
+        angle_rewards = [
+            reward_tuple[1] for reward_tuple in current_ep_reward_tuples
+        ]
+        completion_rewards = [
+            reward_tuple[2] for reward_tuple in current_ep_reward_tuples
+        ]
+        termination_rewards = [
+            reward_tuple[3] for reward_tuple in current_ep_reward_tuples
+        ]
+        action_penalties = [
+            reward_tuple[4] for reward_tuple in current_ep_reward_tuples
+        ]
+        dot_to_goals = [reward_tuple[5] for reward_tuple in current_ep_reward_tuples]
+        step_penalties = [
+            reward_tuple[6] for reward_tuple in current_ep_reward_tuples
+        ]
 
-        # ax1.plot(distances_from_goal, label="Distance from goal", color="blue")
-        # ax1.plot(current_ep_rewards, label="Reward", color="orange")
-        # ax1.plot(current_ep_angle_offsets, label="Angle offset", color="cyan")
-        # ax1.set_xlabel("Time step")
-        # ax1.set_ylabel("Value")
-        # ax1.set_title(f"Episode {ep} - Distance from Goal and Reward")
-        # ax1.legend()
-        # ax1.grid()
+        # plot all the reward components with label
+        plt.figure(figsize=(12, 8))
+        plt.plot(position_rewards, label="Position Reward")
+        plt.plot(angle_rewards, label="Angle Reward")
+        plt.plot(completion_rewards, label="Completion Reward")
+        plt.plot(termination_rewards, label="Termination Reward")
+        plt.plot(action_penalties, label="Action Penalty")
+        plt.plot(dot_to_goals, label="Dot to Goal")
+        plt.plot(step_penalties, label="Step Penalty")
+        plt.title(f"Episode {ep} Reward Components")
+        plt.xlabel("Time Step")
+        plt.ylabel("Reward")
+        plt.legend()
+        plt.grid()
+        plt.savefig(f"episode_{ep}_reward_components.png")
 
-        # ax2.plot(
-        #     [x[0] for x in current_ep_reward_tuples],
-        #     label="Position reward",
-        #     color="green",
-        # )
-        # ax2.plot(
-        #     [x[1] for x in current_ep_reward_tuples], label="Angle reward", color="red"
-        # )
-        # ax2.plot(
-        #     [x[2] for x in current_ep_reward_tuples],
-        #     label="Action reward",
-        #     color="purple",
-        # )
-        # ax2.plot(
-        #     [x[3] for x in current_ep_reward_tuples],
-        #     label="Completion reward",
-        #     color="brown",
-        # )
-        # ax2.set_xlabel("Time step")
-        # ax2.set_ylabel("Reward Components")
-        # ax2.set_title(f"Episode {ep} - Reward Components")
-        # ax2.legend()
-        # ax2.grid()
-
-        # plt.tight_layout()
-        # plt.show()
 
     mean_reward = sum(episode_rewards) / num_episodes
     success_rate = success_count / num_episodes * 100.0
